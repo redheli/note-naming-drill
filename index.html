@@ -66,6 +66,7 @@ body {
   background: var(--card); border: 1px solid var(--border); min-width: 110px; text-align: center; }
 .timer.warn { color: var(--warn); border-color: var(--warn); }
 .timer.over { color: var(--bad); border-color: var(--bad); }
+.ctl .status.over { color: var(--bad); font-weight: 600; }
 .top-right { display: flex; align-items: center; gap: 8px; }
 .btn.lang { padding: 6px 12px; font-weight: 600; font-size: .85rem; letter-spacing: .04em; min-width: 48px; }
 .timer small { font-size: .7rem; font-weight: 500; color: var(--muted); display: block; line-height: 1; margin-top: -2px; }
@@ -282,7 +283,7 @@ const I18N = {
     prev:'← 上一题', clear:'清除', next:'下一题 →', submit:'交卷', answered:'已答',
     sheetTitle:'Name the Notes · 题号', withAcc:'含升降号', questionLabel:'第{n}题',
     timeUsed:'用时', limit:'限时', seedShort:'题号', wrongNotes:'答错的音:',
-    vTimeout:'时间到,自动交卷。', vPerfect:'全对!', vGreat:'很棒,快全对了。', vGood:'不错,再练练错的音。', vKeep:'多练几次就会熟。',
+    timeUpHint:'时间到了,做完后点交卷', overTime:'超时', vPerfect:'全对!', vGreat:'很棒,快全对了。', vGood:'不错,再练练错的音。', vKeep:'多练几次就会熟。',
     againNew:'再来一页(新题)', againSame:'重做这一页', back:'返回设置',
     fitOn:'整页', fitOff:'原大', fitTip:'切换:整页显示 / 原始大小(可滚动)',
     levels: {
@@ -306,7 +307,7 @@ const I18N = {
     prev:'← Prev', clear:'Clear', next:'Next →', submit:'Submit', answered:'Answered',
     sheetTitle:'Name the Notes · Page', withAcc:'with ♯♭', questionLabel:'Question {n}',
     timeUsed:'Time', limit:'limit', seedShort:'Page', wrongNotes:'Missed notes: ',
-    vTimeout:'Time is up. Submitted automatically.', vPerfect:'Perfect!', vGreat:'Great, almost perfect.', vGood:'Nice. Practise the missed notes.', vKeep:'Keep going, it gets easier.',
+    timeUpHint:'Time is up, finish and press Submit', overTime:'over time', vPerfect:'Perfect!', vGreat:'Great, almost perfect.', vGood:'Nice. Practise the missed notes.', vKeep:'Keep going, it gets easier.',
     againNew:'New page', againSame:'Redo this page', back:'Back to settings',
     fitOn:'Fit', fitOff:'Full', fitTip:'Toggle: fit whole page on screen / full size with scrolling',
     levels: {
@@ -475,7 +476,7 @@ function start(s) {
   cfg = readCfg(); store('staff.cfg', cfg);
   seed = s; $('seed').value = s;
   notes = makePage(cfg, seed);
-  answers = new Array(TOTAL).fill(null); cur = 0; pending = 0; graded = false; lastResult = null;
+  answers = new Array(TOTAL).fill(null); cur = 0; pending = 0; graded = false; lastResult = null; overTime = false;
   $('setup').hidden = true; $('test').hidden = false; $('result').hidden = true; $('keypad').hidden = false;
   buildSheet(); buildKeys();
   $('timer').hidden = false; $('fitBtn').hidden = false; updateFitBtn();
@@ -551,7 +552,12 @@ function answer(l) {
 }
 function move(d) { if (graded) return; cur = (cur + d + TOTAL) % TOTAL; updateBoxes(); }
 function clearCur() { if (graded) return; if (answers[cur]) { answers[cur] = null; } else { cur = (cur - 1 + TOTAL) % TOTAL; answers[cur] = null; } updateBoxes(); }
-function updateStatus() { $('status').textContent = `${t('answered')} ${answers.filter(Boolean).length} / ${TOTAL}`; }
+let overTime = false;
+function updateStatus() {
+  const el = $('status');
+  el.textContent = `${t('answered')} ${answers.filter(Boolean).length} / ${TOTAL}` + (overTime ? ' · ' + t('timeUpHint') : '');
+  el.classList.toggle('over', overTime);
+}
 function updateBoxes() {
   boxes.forEach((b, i) => { b.textContent = ansStr(answers[i]); b.classList.toggle('cur', i === cur && !graded); });
   updateStatus();
@@ -561,14 +567,22 @@ function tick() {
   const el = $('timer'); const secs = (Date.now() - t0) / 1000;
   if (!cfg.time) { el.textContent = fmt(secs); el.className = 'timer'; return; }
   const left = cfg.time - secs;
-  el.textContent = fmt(Math.ceil(left));
-  el.className = 'timer' + (left <= 20 ? ' warn' : '');
-  if (left <= 0) grade(true);
+  if (left > 0) {
+    el.textContent = fmt(Math.ceil(left));
+    el.className = 'timer' + (left <= 20 ? ' warn' : '');
+    if (overTime) { overTime = false; updateStatus(); }
+  } else {
+    // Time is up: warn, keep counting, and let the child finish and press Submit.
+    el.textContent = '⏰ +' + fmt(-left);
+    el.className = 'timer over';
+    if (!overTime) { overTime = true; updateStatus(); }
+  }
 }
-function grade(timeout) {
+function grade() {
   if (graded) return;
   graded = true; clearInterval(timerId);
-  const secs = Math.min((Date.now() - t0) / 1000, cfg.time || Infinity);
+  const secs = (Date.now() - t0) / 1000;
+  const timeout = !!cfg.time && secs > cfg.time;
   const miss = load('staff.miss', {});
   let score = 0; const wrong = {};
   notes.forEach((n, i) => {
@@ -597,9 +611,9 @@ function renderResult() {
   const { score, secs, wrong, timeout } = lastResult;
   const wrongList = Object.entries(wrong).sort((a, b) => b[1] - a[1]).map(([k, v]) => `<span>${k}${v > 1 ? ' ×' + v : ''}</span>`).join('');
   const pct = score / TOTAL;
-  const verdict = timeout ? t('vTimeout') : pct === 1 ? t('vPerfect') : pct >= 0.9 ? t('vGreat') : pct >= 0.7 ? t('vGood') : t('vKeep');
+  const verdict = pct === 1 ? t('vPerfect') : pct >= 0.9 ? t('vGreat') : pct >= 0.7 ? t('vGood') : t('vKeep');
   $('result').innerHTML = `<div class="score"><b class="${pct >= 0.9 ? 'good' : pct < 0.7 ? 'bad' : ''}">${score} / ${TOTAL}</b><span>${verdict}</span></div>
-    <div class="meta">${t('timeUsed')} ${fmt(secs)}${cfg.time ? ' (' + t('limit') + ' ' + fmt(cfg.time) + ')' : ''} · ${levelName(cfg.level)} · ${t('seedShort')} #${seed}</div>
+    <div class="meta">${t('timeUsed')} ${fmt(secs)}${cfg.time ? ' (' + t('limit') + ' ' + fmt(cfg.time) + (timeout ? ', ' + t('overTime') : '') + ')' : ''} · ${levelName(cfg.level)} · ${t('seedShort')} #${seed}</div>
     ${wrongList ? `<div class="wrong">${t('wrongNotes')}${wrongList}</div>` : ''}
     <div class="actions"><button class="btn primary" id="againNew" type="button">${t('againNew')}</button><button class="btn" id="againSame" type="button">${t('againSame')}</button><button class="btn" id="backBtn" type="button">${t('back')}</button></div>`;
   $('result').hidden = false;
@@ -616,7 +630,7 @@ function backToSetup() {
 $('prevBtn').addEventListener('click', () => move(-1));
 $('nextBtn').addEventListener('click', () => move(1));
 $('clearBtn').addEventListener('click', clearCur);
-$('submitBtn').addEventListener('click', () => grade(false));
+$('submitBtn').addEventListener('click', () => grade());
 document.addEventListener('keydown', e => {
   if ($('test').hidden || graded || e.ctrlKey || e.metaKey || e.altKey) return;
   const k = e.key;
@@ -626,7 +640,7 @@ document.addEventListener('keydown', e => {
   else if (k === 'Backspace' || k === 'Delete') { clearCur(); e.preventDefault(); }
   else if (k === 'ArrowLeft' || k === 'ArrowUp') { move(-1); e.preventDefault(); }
   else if (k === 'ArrowRight' || k === 'ArrowDown') { move(1); e.preventDefault(); }
-  else if (k === 'Enter') { if (answers.every(Boolean)) grade(false); e.preventDefault(); }
+  else if (k === 'Enter') { if (answers.every(Boolean)) grade(); e.preventDefault(); }
 });
 buildSetup();
 </script>
