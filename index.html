@@ -57,7 +57,7 @@ body {
   padding-left: max(16px, env(safe-area-inset-left, 0px));
   padding-right: max(16px, env(safe-area-inset-right, 0px));
 }
-.wrap { max-width: 1400px; margin: 0 auto; }
+.wrap { max-width: 1800px; margin: 0 auto; }
 .top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
   position: sticky; top: env(safe-area-inset-top, 0px); background: var(--bg); z-index: 5; padding-block: 10px 8px; }
 .top h1 { font-size: 1.25rem; margin: 0; letter-spacing: .01em; }
@@ -112,6 +112,9 @@ input[type=number] { width: 7.5em; }
 .sheet-head { display: flex; justify-content: space-between; align-items: baseline; font-family: var(--font-note); color: var(--ink); padding: 0 4px 2px; flex-wrap: wrap; gap: 6px; }
 .sheet-head b { font-size: 1.15rem; font-weight: 600; }
 .sheet-head span { color: #6e675c; font-size: .9rem; }
+.staves { display: grid; gap: 2px; }
+.sheet.cols2 .staves { grid-template-columns: 1fr 1fr; grid-template-rows: repeat(3, auto); grid-auto-flow: column; column-gap: 40px; align-items: start; }
+.sheet.fit.cols2 { width: 1700px; }
 .stave { display: grid; gap: 0; }
 .stave svg { width: 100%; height: auto; display: block; }
 .boxes { display: grid; grid-template-columns: repeat(5, 1fr); margin-left: 9.72%; gap: 0; padding-bottom: 2px; }
@@ -379,9 +382,11 @@ let geo = GEO_WIDE, narrowNow = null;
 function isNarrow() { return window.innerWidth < 600; }
 function staveSVG(notes, cfg, last) {
   const { X0, CW, W } = geo;
-  const maxPos = Math.max(8, cfg.max - 2), minPos = Math.min(0, cfg.min - 2);
-  const bottom = 9 + maxPos * 5;
-  const H = bottom + (-minPos) * 5 + 8;
+  const poss = notes.map(n => n.step - 2);
+  const maxPos = Math.max(8, Math.max(...poss) + 1), minPos = Math.min(0, Math.min(...poss) - 1);
+  // Leave room for the clef (it reaches 14 above the top line and 16 below the bottom line).
+  const bottom = Math.max(9 + maxPos * 5, 56);
+  const H = bottom + Math.max((-minPos) * 5 + 8, 18);
   let s = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">`;
   s += `<g stroke="var(--ink)" stroke-width="1.1">`;
   for (let k = 0; k < 5; k++) { const y = bottom - k * SP; s += `<line x1="6" y1="${y}" x2="${W - 6}" y2="${y}"/>`; }
@@ -491,17 +496,26 @@ function fitSheet() {
   const narrow = isNarrow();
   if (narrow !== narrowNow && !graded) { buildSheet(); updateBoxes(); }
   const sheet = $('sheet'), host = $('sheetHost');
-  sheet.classList.remove('fit'); sheet.style.transform = ''; host.style.height = '';
+  sheet.classList.remove('fit', 'cols2'); sheet.style.transform = ''; host.style.height = '';
   if (narrow || graded) return;
   sheet.classList.add('fit');
   const headerH = document.querySelector('.top').offsetHeight;
   const availH = window.innerHeight - headerH - $('keypad').offsetHeight - 16;
-  const natH = sheet.offsetHeight;
-  const scaleW = Math.min(host.clientWidth / SHEET_W, 1.6), scaleH = availH / natH;
-  // Full-size mode, or a screen too short to fit (phone landscape): natural size, capped at 1, and the page scrolls.
-  const scale = (!fitPref || window.innerHeight < 520) ? Math.min(scaleW, 1) : Math.max(0.45, Math.min(scaleW, scaleH));
-  sheet.style.transform = `translateX(-50%) scale(${scale.toFixed(4)})`;
-  host.style.height = Math.ceil(natH * scale) + 'px';
+  const hostW = host.clientWidth;
+  // One column: the classic worksheet. Two columns of three staves: uses wide screens much better.
+  const measure = (cols2, W) => { sheet.classList.toggle('cols2', cols2); const h = sheet.offsetHeight; return { cols2, h, s: Math.min(hostW / W, availH / h, 1.6) }; };
+  let pick = measure(false, SHEET_W);
+  if (!fitPref || window.innerHeight < 520) {
+    // Full-size mode, or a screen too short to fit (phone landscape): natural size, capped at 1, and the page scrolls.
+    pick.s = Math.min(hostW / SHEET_W, 1);
+  } else {
+    const two = measure(true, 1700);
+    pick = two.s > pick.s * 1.15 ? two : pick;
+    pick.s = Math.max(0.45, pick.s);
+  }
+  sheet.classList.toggle('cols2', pick.cols2);
+  sheet.style.transform = `translateX(-50%) scale(${pick.s.toFixed(4)})`;
+  host.style.height = Math.ceil(pick.h * pick.s) + 'px';
 }
 let rzTimer = null;
 window.addEventListener('resize', () => { clearTimeout(rzTimer); rzTimer = setTimeout(fitSheet, 120); });
@@ -511,13 +525,14 @@ function sheetHeadHTML() {
 function buildSheet() {
   narrowNow = isNarrow(); geo = narrowNow ? GEO_NARROW : GEO_WIDE;
   const boxesMargin = (geo.X0 / geo.W * 100).toFixed(2) + '%';
-  let html = `<div class="sheet-head" id="sheetHead">${sheetHeadHTML()}</div>`;
+  let html = `<div class="sheet-head" id="sheetHead">${sheetHeadHTML()}</div><div class="staves">`;
   for (let r = 0; r < ROWS; r++) {
     const slice = notes.slice(r * COLS, r * COLS + COLS);
     html += `<div class="stave">${staveSVG(slice, cfg, r === ROWS - 1)}<div class="boxes" style="margin-left:${boxesMargin}">`;
     for (let c = 0; c < COLS; c++) { const i = r * COLS + c; html += `<button class="box" type="button" data-i="${i}" aria-label="${t('questionLabel').replace('{n}', i + 1)}"></button>`; }
     html += `</div></div>`;
   }
+  html += `</div>`;
   $('sheet').innerHTML = html;
   boxes = Array.from($('sheet').querySelectorAll('.box'));
   boxes.forEach(b => b.addEventListener('click', () => { if (graded) return; cur = +b.dataset.i; updateBoxes(); }));
