@@ -1,0 +1,578 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>五线谱识谱练习</title>
+<style>
+/* Layout: a worksheet page (6 staves × 5 notes) on cream paper, settings above, a sticky keypad below. */
+:root {
+  --bg: #f3efe6;
+  --fg: #221f1a;
+  --muted: #6e675c;
+  --border: #d9d1c2;
+  --accent: #2f6b8c;
+  --accent-fg: #ffffff;
+  --good: #2b7a4b;
+  --bad: #b93a2d;
+  --warn: #b5731a;
+  --key: #fbf9f4;
+  --key-fg: #221f1a;
+  --card: #faf8f2;
+  /* paper tokens stay light in both themes, like sheet music */
+  --paper: #fffdf7;
+  --ink: #1c1a17;
+  --sel: #dbe9f2;
+  --sel-ring: #2f6b8c;
+  --paper-good: #2b7a4b;
+  --paper-bad: #b93a2d;
+  --paper-bad-bg: #fbe6e2;
+  --paper-good-bg: #e3f2e8;
+  --font-ui: system-ui, -apple-system, "Segoe UI", "PingFang SC", "Noto Sans CJK SC", "Microsoft YaHei", sans-serif;
+  --font-note: "Georgia", "Times New Roman", serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #17191d; --fg: #ebe6dc; --muted: #a39b8d; --border: #343941;
+    --accent: #6fb4d6; --accent-fg: #0f1b22; --good: #5cbb83; --bad: #e8705f; --warn: #e2a54a;
+    --key: #23272d; --key-fg: #ebe6dc; --card: #1f2227; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #17191d; --fg: #ebe6dc; --muted: #a39b8d; --border: #343941;
+  --accent: #6fb4d6; --accent-fg: #0f1b22; --good: #5cbb83; --bad: #e8705f; --warn: #e2a54a;
+  --key: #23272d; --key-fg: #ebe6dc; --card: #1f2227; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body {
+  background: var(--bg); color: var(--fg); font-family: var(--font-ui); font-size: 16px; line-height: 1.45;
+  margin: 0; padding-block: 0 140px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap { max-width: 860px; margin: 0 auto; }
+.top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  position: sticky; top: env(safe-area-inset-top, 0px); background: var(--bg); z-index: 5; padding-block: 10px 8px; }
+.top h1 { font-size: 1.25rem; margin: 0; letter-spacing: .01em; }
+.top .sub { color: var(--muted); font-size: .85rem; font-weight: 400; margin-left: 8px; }
+.timer { font-variant-numeric: tabular-nums; font-size: 1.6rem; font-weight: 700; padding: 2px 14px; border-radius: 999px;
+  background: var(--card); border: 1px solid var(--border); min-width: 110px; text-align: center; }
+.timer.warn { color: var(--warn); border-color: var(--warn); }
+.timer.over { color: var(--bad); border-color: var(--bad); }
+.top-right { display: flex; align-items: center; gap: 8px; }
+.btn.lang { padding: 6px 12px; font-weight: 600; font-size: .85rem; letter-spacing: .04em; min-width: 48px; }
+.timer small { font-size: .7rem; font-weight: 500; color: var(--muted); display: block; line-height: 1; margin-top: -2px; }
+button { font: inherit; cursor: pointer; }
+.btn { border: 1px solid var(--border); background: var(--card); color: var(--fg); padding: 8px 16px; border-radius: 8px; }
+.btn.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); font-weight: 600; }
+.btn:focus-visible, .key:focus-visible, .box:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+/* settings */
+.setup { display: grid; gap: 18px; padding-block: 8px 24px; }
+.field { display: grid; gap: 8px; }
+.field > .label { font-weight: 600; font-size: .95rem; }
+.field > .label span { color: var(--muted); font-weight: 400; font-size: .85rem; margin-left: 8px; }
+.levels { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 8px; }
+.levels label { border: 1px solid var(--border); background: var(--card); border-radius: 10px; padding: 10px 12px; cursor: pointer; display: grid; gap: 2px; }
+.levels label:has(input:checked) { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.levels input { position: absolute; opacity: 0; width: 0; height: 0; }
+.levels b { font-size: .95rem; }
+.levels small { color: var(--muted); }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chips label { border: 1px solid var(--border); background: var(--card); border-radius: 999px; padding: 6px 14px; cursor: pointer; }
+.chips label:has(input:checked) { border-color: var(--accent); background: var(--sel); color: #1c1a17; }
+.chips input { position: absolute; opacity: 0; width: 0; height: 0; }
+.row-inline { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+select, input[type=number] { font: inherit; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--card); color: var(--fg); }
+input[type=number] { width: 7.5em; }
+.hint { color: var(--muted); font-size: .85rem; }
+.start-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.start-row .btn.primary { font-size: 1.1rem; padding: 12px 28px; }
+.history { border-top: 1px solid var(--border); padding-top: 14px; }
+.history h2 { font-size: 1rem; margin: 0 0 8px; display: flex; justify-content: space-between; align-items: center; }
+.history h2 button { font-size: .8rem; }
+.history table { width: 100%; border-collapse: collapse; font-size: .9rem; font-variant-numeric: tabular-nums; }
+.history th, .history td { text-align: left; padding: 5px 6px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+.history th { color: var(--muted); font-weight: 500; font-size: .8rem; }
+.history .tbl { overflow-x: auto; }
+.empty { color: var(--muted); font-size: .9rem; }
+
+/* worksheet */
+.sheet { background: var(--paper); color: var(--ink); border-radius: 12px; padding: 12px clamp(8px, 2.5vw, 24px) 16px;
+  box-shadow: 0 1px 2px rgba(0,0,0,.08), 0 8px 24px rgba(0,0,0,.06); display: grid; gap: 4px; }
+.sheet-head { display: flex; justify-content: space-between; align-items: baseline; font-family: var(--font-note); color: var(--ink); padding: 0 4px 4px; flex-wrap: wrap; gap: 6px; }
+.sheet-head b { font-size: 1.15rem; font-weight: 600; }
+.sheet-head span { color: #6e675c; font-size: .9rem; }
+.stave { display: grid; gap: 0; }
+.stave svg { width: 100%; height: auto; display: block; }
+.boxes { display: grid; grid-template-columns: repeat(5, 1fr); margin-left: 9.72%; gap: 0; padding-bottom: 6px; }
+.box { justify-self: center; width: 76%; max-width: 92px; min-height: 36px; border: 0; border-bottom: 2px solid var(--ink); background: transparent;
+  color: var(--ink); font-family: var(--font-note); font-size: 1.35rem; font-weight: 600; border-radius: 6px 6px 0 0; display: grid; place-items: center; line-height: 1; position: relative; }
+.box:hover { background: rgba(0,0,0,.04); }
+.box.cur { background: var(--sel); box-shadow: inset 0 0 0 2px var(--sel-ring); }
+.box.ok { color: var(--paper-good); background: var(--paper-good-bg); border-bottom-color: var(--paper-good); }
+.box.bad { color: var(--paper-bad); background: var(--paper-bad-bg); border-bottom-color: var(--paper-bad); text-decoration: line-through; }
+.box .fix { position: absolute; left: 0; right: 0; top: 100%; font-size: .9rem; color: var(--paper-good); text-decoration: none; padding-top: 3px; }
+.boxes.graded { padding-bottom: 24px; }
+.box.bad.blank { text-decoration: none; }
+
+/* keypad */
+.keypad { position: fixed; left: 0; right: 0; bottom: 0; z-index: 6; background: var(--bg); border-top: 1px solid var(--border);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-top: 8px; padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px)); }
+.keypad .inner { max-width: 860px; margin: 0 auto; display: grid; gap: 8px; }
+.keys { display: grid; grid-template-columns: repeat(9, 1fr); gap: 6px; }
+.keys.no-acc { grid-template-columns: repeat(7, 1fr); }
+.key { border: 1px solid var(--border); background: var(--key); color: var(--key-fg); border-radius: 10px; min-height: 48px; font-size: 1.3rem; font-weight: 700; font-family: var(--font-note);
+  box-shadow: 0 1px 0 var(--border); }
+.key.acc { font-size: 1.5rem; }
+.key.acc.on { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+.key:active { transform: translateY(1px); box-shadow: none; }
+.ctl { display: flex; gap: 8px; align-items: center; }
+.ctl .status { flex: 1; color: var(--muted); font-size: .9rem; min-width: 0; }
+.ctl .btn { padding: 8px 14px; }
+
+/* results */
+.result { scroll-margin-top: 72px; display: grid; gap: 10px; background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; margin-block: 10px 14px; }
+.result .score { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+.result .score b { font-size: 2.2rem; font-variant-numeric: tabular-nums; }
+.result .score .good { color: var(--good); }
+.result .score .bad { color: var(--bad); }
+.result .meta { color: var(--muted); font-size: .9rem; }
+.result .wrong { font-size: .95rem; }
+.result .wrong span { display: inline-block; border: 1px solid var(--border); border-radius: 6px; padding: 2px 8px; margin: 2px 4px 2px 0; font-family: var(--font-note); font-weight: 600; }
+.result .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+@media (max-width: 520px) {
+  .box { font-size: 1.1rem; min-height: 30px; }
+  .key { min-height: 44px; font-size: 1.15rem; }
+  .top h1 { font-size: 1.05rem; }
+  .timer { font-size: 1.3rem; }
+}
+@media print {
+  .top, .keypad, .result, .setup { display: none !important; }
+  body { background: #fff; padding: 0; }
+  .sheet { box-shadow: none; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="top">
+    <h1><span data-i18n="title">五线谱识谱练习</span> <span class="sub" data-i18n="subtitle">长笛 · 高音谱号</span></h1>
+    <div class="top-right">
+      <button class="btn lang" id="langBtn" type="button" aria-label="Switch language">EN</button>
+      <div class="timer" id="timer" hidden>2:00</div>
+    </div>
+  </header>
+
+  <section class="setup" id="setup">
+    <div class="field">
+      <div class="label"><span data-i18n="level">难度</span><span data-i18n="levelHint">长笛最低音是中央 C(C4)</span></div>
+      <div class="levels" id="levels"></div>
+      <div class="row-inline" id="customRange" hidden>
+        <label><span data-i18n="lowest">最低</span> <select id="minSel"></select></label>
+        <label><span data-i18n="highest">最高</span> <select id="maxSel"></select></label>
+      </div>
+    </div>
+    <div class="field">
+      <div class="label"><span data-i18n="acc">升降号</span><span data-i18n="accHint">答案要写成 F♯、B♭ 这样</span></div>
+      <div class="chips">
+        <label><input type="radio" name="acc" value="0" checked><span data-i18n="accOff">不出现</span></label>
+        <label><input type="radio" name="acc" value="1"><span data-i18n="accOn">出现 ♯ 和 ♭</span></label>
+      </div>
+    </div>
+    <div class="field">
+      <div class="label"><span data-i18n="time">时间</span><span data-i18n="timeHint">一页 30 题,目标 2 分钟</span></div>
+      <div class="chips">
+        <label><input type="radio" name="time" value="60">1:00</label>
+        <label><input type="radio" name="time" value="90">1:30</label>
+        <label><input type="radio" name="time" value="120" checked>2:00</label>
+        <label><input type="radio" name="time" value="180">3:00</label>
+        <label><input type="radio" name="time" value="0"><span data-i18n="untimed">不计时</span></label>
+      </div>
+    </div>
+    <div class="field">
+      <div class="label"><span data-i18n="seed">题目编号</span><span data-i18n="seedHint">同一个编号出同一套题,可以重做</span></div>
+      <div class="row-inline">
+        <input type="number" id="seed" min="1" max="99999" step="1">
+        <button class="btn" id="randSeed" type="button" data-i18n="newSeed">换一个</button>
+        <label class="hint" id="emphWrap" hidden><input type="checkbox" id="emph"> <span data-i18n="emph">多出以前答错的音</span></label>
+      </div>
+    </div>
+    <div class="start-row">
+      <button class="btn primary" id="startBtn" type="button" data-i18n="start">开始测试</button>
+      <span class="hint" data-i18n="keysHint">用键盘按 A–G 作答,# 是升号,- 是降号;平板上点下方按键</span>
+    </div>
+    <div class="history">
+      <h2><span data-i18n="history">练习记录</span> <button class="btn" id="clearHist" type="button" data-i18n="clearHistory">清空记录</button></h2>
+      <div id="histBody"></div>
+    </div>
+  </section>
+
+  <section id="test" hidden>
+    <div class="result" id="result" hidden></div>
+    <div class="sheet" id="sheet"></div>
+  </section>
+</div>
+
+<nav class="keypad" id="keypad" hidden>
+  <div class="inner">
+    <div class="keys" id="keys"></div>
+    <div class="ctl">
+      <button class="btn" id="prevBtn" type="button" data-i18n="prev">← 上一题</button>
+      <button class="btn" id="clearBtn" type="button" data-i18n="clear">清除</button>
+      <button class="btn" id="nextBtn" type="button" data-i18n="next">下一题 →</button>
+      <div class="status" id="status"></div>
+      <button class="btn primary" id="submitBtn" type="button" data-i18n="submit">交卷</button>
+    </div>
+  </div>
+</nav>
+
+<script>
+const GLYPH={
+  clef:"M314 801Q300 854 291.0 906.0Q282 958 282 1012Q282 1059 288.5 1100.5Q295 1142 307 1177Q320 1217 341.0 1252.5Q362 1288 385.5 1311.0Q409 1334 427 1334Q451 1334 493 1249Q514 1206 524.0 1156.0Q534 1106 534 1049Q534 978 515.0 907.5Q496 837 459.5 775.0Q423 713 372 666L407 498Q422 500 432.0 501.0Q442 502 447 502Q508 502 556.0 467.5Q604 433 632.5 377.0Q661 321 661 254Q661 177 621.5 115.5Q582 54 503 25Q508 8 532 -117Q538 -147 541.0 -164.5Q544 -182 545.0 -195.0Q546 -208 546 -225Q546 -275 521.5 -314.5Q497 -354 455.5 -376.0Q414 -398 363 -398Q311 -398 271.0 -378.5Q231 -359 208.0 -324.5Q185 -290 185 -245Q185 -197 211.5 -165.0Q238 -133 287 -133Q329 -133 355.5 -163.5Q382 -194 382 -236Q382 -272 357.0 -299.0Q332 -326 292 -326H282Q308 -365 364 -365Q433 -365 472.0 -320.0Q511 -275 511 -205Q511 -188 507.0 -159.5Q503 -131 493 -91Q483 -51 477.5 -25.0Q472 1 470 12Q436 2 390 2Q304 2 222 52Q142 102 96.0 184.0Q50 266 50 361Q50 451 91 530Q132 609 192.5 675.0Q253 741 314 801ZM341 826Q364 838 390.0 870.5Q416 903 440.0 945.0Q464 987 479.0 1029.5Q494 1072 494 1106Q494 1142 483.0 1163.0Q472 1184 445 1184Q421 1184 398.5 1162.0Q376 1140 358.5 1103.5Q341 1067 331.0 1022.0Q321 977 321 930Q321 898 327.5 872.0Q334 846 341 826ZM398 379Q371 373 347.0 353.5Q323 334 308.5 306.5Q294 279 294 248Q294 223 307.0 196.5Q320 170 339 154Q352 142 365 136Q380 129 380 123Q380 120 370 117Q332 126 301.5 151.0Q271 176 253.5 211.5Q236 247 236 287Q236 330 253.5 370.0Q271 410 302.5 442.0Q334 474 374 490L345 641Q229 547 174.5 456.5Q120 366 120 277Q120 212 154.0 156.0Q188 100 247.0 65.5Q306 31 380 31Q400 31 420.5 35.0Q441 39 464 45ZM495 55Q593 97 593 227Q593 270 571.0 305.5Q549 341 512.0 362.0Q475 383 429 383Z",
+  whole:"M50 135Q50 172 77.0 200.0Q104 228 150.5 244.0Q197 260 253 260Q310 260 358.0 244.5Q406 229 435.0 201.0Q464 173 464 135Q464 96 436.0 67.5Q408 39 361.5 23.5Q315 8 259 8Q203 8 155.5 23.0Q108 38 79.0 66.5Q50 95 50 135ZM280 28Q314 28 326.5 53.0Q339 78 339 112Q339 147 324.5 176.0Q310 205 286.0 222.5Q262 240 232 240Q198 240 186.5 215.0Q175 190 175 156Q175 122 189.0 93.0Q203 64 226.5 46.0Q250 28 280 28Z",
+  sharp:"M502 82 404 39V-135H357V20L196 -58V-233H149V-77L51 -124V-46L149 0V245L51 198V276L149 323V482H196V342L357 420V590H404V439L502 485V408L404 361V116L502 160ZM357 97V342L196 264V19Z",
+  flat:"M51 524H88V179Q117 220 148.0 243.5Q179 267 209 267Q250 267 273.0 242.0Q296 217 296 173Q296 115 263 70Q241 40 208.0 19.0Q175 -2 138.5 -13.5Q102 -25 69 -25H51ZM88 141V3Q115 3 153 25Q192 47 215.5 83.0Q239 119 239 162Q239 191 230.5 206.5Q222 222 199 222Q171 222 140.5 198.0Q110 174 88 141Z",
+};
+
+const LETTERS = ['C','D','E','F','G','A','B'];
+const SHARP_OK = new Set(['C','D','F','G','A']);
+const FLAT_OK  = new Set(['D','E','G','A','B']);
+const ROWS = 6, COLS = 5, TOTAL = ROWS * COLS;
+const LEVELS = [
+  { id:'l1', min:2,  max:10 },
+  { id:'l2', min:0,  max:11 },
+  { id:'l3', min:0,  max:14 },
+  { id:'l4', min:0,  max:18 },
+  { id:'custom', min:0, max:14 },
+];
+
+// ---------- language ----------
+const I18N = {
+  zh: {
+    title:'五线谱识谱练习', subtitle:'长笛 · 高音谱号', langBtn:'EN',
+    level:'难度', levelHint:'长笛最低音是中央 C(C4)', lowest:'最低', highest:'最高',
+    acc:'升降号', accHint:'答案要写成 F♯、B♭ 这样', accOff:'不出现', accOn:'出现 ♯ 和 ♭',
+    time:'时间', timeHint:'一页 30 题,目标 2 分钟', untimed:'不计时',
+    seed:'题目编号', seedHint:'同一个编号出同一套题,可以重做', newSeed:'换一个', emph:'多出以前答错的音',
+    start:'开始测试', keysHint:'用键盘按 A–G 作答,# 是升号,- 是降号;平板上点下方按键',
+    history:'练习记录', clearHistory:'清空记录', noHistory:'还没有记录。做完一页会自动记在这里。',
+    hWhen:'时间', hLevel:'难度', hSeed:'题号', hScore:'得分', hTime:'用时', timeoutTag:'到时', oftenMissed:'常错的音:',
+    prev:'← 上一题', clear:'清除', next:'下一题 →', submit:'交卷', answered:'已答',
+    sheetTitle:'Name the Notes · 题号', withAcc:'含升降号', questionLabel:'第{n}题',
+    timeUsed:'用时', limit:'限时', seedShort:'题号', wrongNotes:'答错的音:',
+    vTimeout:'时间到,自动交卷。', vPerfect:'全对!', vGreat:'很棒,快全对了。', vGood:'不错,再练练错的音。', vKeep:'多练几次就会熟。',
+    againNew:'再来一页(新题)', againSame:'重做这一页', back:'返回设置',
+    levels: {
+      l1:['第1级 · 线与间','E4–F5,五条线、四个间'],
+      l2:['第2级 · 加中央C和高音G','C4–G5,含下加一线'],
+      l3:['第3级 · 上加线','C4–C6,上加两线'],
+      l4:['第4级 · 高音区','C4–G6,长笛第三个八度'],
+      custom:['自定义范围','自己选最低音和最高音'],
+    },
+    levelShort: { l1:'第1级', l2:'第2级', l3:'第3级', l4:'第4级', custom:'自定义' },
+  },
+  en: {
+    title:'Staff Reading Practice', subtitle:'Flute · Treble clef', langBtn:'中文',
+    level:'Level', levelHint:'The flute\'s lowest note is middle C (C4)', lowest:'Lowest', highest:'Highest',
+    acc:'Sharps & flats', accHint:'Answers look like F♯ or B♭', accOff:'None', accOn:'Include ♯ and ♭',
+    time:'Timer', timeHint:'30 notes per page, aim for 2 minutes', untimed:'No limit',
+    seed:'Page number', seedHint:'The same number always gives the same page, so you can redo it', newSeed:'New page', emph:'Show missed notes more often',
+    start:'Start test', keysHint:'Type A–G to answer, # for sharp, - for flat; on a tablet tap the keys below',
+    history:'Practice log', clearHistory:'Clear log', noHistory:'No records yet. Finished pages are saved here automatically.',
+    hWhen:'When', hLevel:'Level', hSeed:'Page', hScore:'Score', hTime:'Time', timeoutTag:'time up', oftenMissed:'Often missed: ',
+    prev:'← Prev', clear:'Clear', next:'Next →', submit:'Submit', answered:'Answered',
+    sheetTitle:'Name the Notes · Page', withAcc:'with ♯♭', questionLabel:'Question {n}',
+    timeUsed:'Time', limit:'limit', seedShort:'Page', wrongNotes:'Missed notes: ',
+    vTimeout:'Time is up. Submitted automatically.', vPerfect:'Perfect!', vGreat:'Great, almost perfect.', vGood:'Nice. Practise the missed notes.', vKeep:'Keep going, it gets easier.',
+    againNew:'New page', againSame:'Redo this page', back:'Back to settings',
+    levels: {
+      l1:['Level 1 · Lines & spaces','E4–F5, the five lines and four spaces'],
+      l2:['Level 2 · Middle C to high G','C4–G5, one ledger line below'],
+      l3:['Level 3 · Ledger lines','C4–C6, up to two ledger lines above'],
+      l4:['Level 4 · High register','C4–G6, the flute\'s third octave'],
+      custom:['Custom range','Pick your own lowest and highest note'],
+    },
+    levelShort: { l1:'Level 1', l2:'Level 2', l3:'Level 3', l4:'Level 4', custom:'Custom' },
+  },
+};
+let lang = load('staff.lang', null) || (navigator.language && navigator.language.toLowerCase().startsWith('zh') ? 'zh' : 'en');
+function t(k) { return I18N[lang][k]; }
+function levelName(id) { return I18N[lang].levels[id][0]; }
+function applyLang() {
+  document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
+  document.title = t('title');
+  document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
+  document.querySelectorAll('#levels label').forEach(l => {
+    const id = l.querySelector('input').value; const [n, d] = I18N[lang].levels[id];
+    l.querySelector('b').textContent = n; l.querySelector('small').textContent = d;
+  });
+  const lb = document.getElementById('langBtn'); if (lb) lb.textContent = t('langBtn');
+}
+function setLang(l) { lang = l; store('staff.lang', l); applyLang(); renderHistory(); if (cfg && !document.getElementById('test').hidden) { refreshTestText(); } }
+const STEP_MIN = -2, STEP_MAX = 21; // A3 .. C7
+
+function noteName(step) { return LETTERS[((step % 7) + 7) % 7] + (4 + Math.floor(step / 7)); }
+function accSym(a) { return a === 1 ? '♯' : a === -1 ? '♭' : ''; }
+function ansStr(x) { return x ? x.l + accSym(x.a) : ''; }
+function mulberry32(a) { return function() { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function store(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+function load(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } }
+function fmt(s) { s = Math.max(0, Math.round(s)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); }
+
+// ---------- question generation ----------
+function makePage(cfg, seed) {
+  const rng = mulberry32(seed);
+  const miss = cfg.emph ? load('staff.miss', {}) : {};
+  const steps = []; for (let s = cfg.min; s <= cfg.max; s++) steps.push(s);
+  const weights = steps.map(s => 1 + Math.min(4, miss[noteName(s)] || 0) * 1.5);
+  const notes = []; let prev = null;
+  for (let i = 0; i < TOTAL; i++) {
+    let step;
+    for (let tries = 0; tries < 20; tries++) {
+      let r = rng() * weights.reduce((a, b) => a + b, 0);
+      let k = 0; while (k < steps.length - 1 && r >= weights[k]) { r -= weights[k]; k++; }
+      step = steps[k];
+      if (step !== prev || steps.length < 2) break;
+    }
+    let acc = 0;
+    if (cfg.acc && rng() < 0.35) {
+      const l = LETTERS[((step % 7) + 7) % 7];
+      const want = rng() < 0.5 ? 1 : -1;
+      if (want === 1 && SHARP_OK.has(l)) acc = 1;
+      else if (want === -1 && FLAT_OK.has(l)) acc = -1;
+      else if (SHARP_OK.has(l)) acc = 1; else if (FLAT_OK.has(l)) acc = -1;
+    }
+    notes.push({ step, acc }); prev = step;
+  }
+  return notes;
+}
+
+// ---------- staff rendering ----------
+const SP = 10, X0 = 70, CW = 130, W = 720, SCALE = 0.04;
+function staveSVG(notes, cfg, last) {
+  const maxPos = Math.max(8, cfg.max - 2), minPos = Math.min(0, cfg.min - 2);
+  const bottom = 14 + maxPos * 5;
+  const H = bottom + (-minPos) * 5 + 14;
+  let s = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">`;
+  s += `<g stroke="var(--ink)" stroke-width="1.1">`;
+  for (let k = 0; k < 5; k++) { const y = bottom - k * SP; s += `<line x1="6" y1="${y}" x2="${W - 6}" y2="${y}"/>`; }
+  for (let i = 1; i < COLS; i++) { const x = X0 + CW * i; s += `<line x1="${x}" y1="${bottom - 4 * SP}" x2="${x}" y2="${bottom}"/>`; }
+  s += `<line x1="${W - 6}" y1="${bottom - 4 * SP}" x2="${W - 6}" y2="${bottom}"/>`;
+  if (last) s += `<line x1="${W - 10}" y1="${bottom - 4 * SP}" x2="${W - 10}" y2="${bottom}" stroke-width="3"/>`;
+  s += `</g>`;
+  s += `<path d="${GLYPH.clef}" fill="var(--ink)" transform="translate(12 ${bottom}) scale(${SCALE} ${-SCALE})"/>`;
+  notes.forEach((n, i) => {
+    const cx = X0 + CW * i + CW / 2;
+    const pos = n.step - 2;
+    const cy = bottom - pos * 5;
+    s += `<g stroke="var(--ink)" stroke-width="1.2">`;
+    for (let p = -2; p >= pos; p -= 2) s += `<line x1="${cx - 13}" y1="${bottom - p * 5}" x2="${cx + 13}" y2="${bottom - p * 5}"/>`;
+    for (let p = 10; p <= pos; p += 2) s += `<line x1="${cx - 13}" y1="${bottom - p * 5}" x2="${cx + 13}" y2="${bottom - p * 5}"/>`;
+    s += `</g>`;
+    if (n.acc === 1) s += `<path d="${GLYPH.sharp}" fill="var(--ink)" transform="translate(${cx - 31} ${cy + 7.1}) scale(${SCALE} ${-SCALE})"/>`;
+    if (n.acc === -1) s += `<path d="${GLYPH.flat}" fill="var(--ink)" transform="translate(${cx - 24} ${cy + 5}) scale(${SCALE} ${-SCALE})"/>`;
+    s += `<path d="${GLYPH.whole}" fill="var(--ink)" transform="translate(${cx - 10.3} ${cy + 5.36}) scale(${SCALE} ${-SCALE})"/>`;
+  });
+  return s + `</svg>`;
+}
+
+// ---------- state ----------
+const $ = id => document.getElementById(id);
+let cfg = null, seed = 0, notes = [], answers = [], cur = 0, pending = 0, graded = false;
+let t0 = 0, timerId = null, boxes = [];
+
+function readCfg() {
+  const lv = LEVELS.find(l => l.id === document.querySelector('input[name=level]:checked').value);
+  let min = lv.min, max = lv.max;
+  if (lv.id === 'custom') { min = +$('minSel').value; max = +$('maxSel').value; if (min > max) [min, max] = [max, min]; }
+  return { level: lv.id, min, max,
+    acc: document.querySelector('input[name=acc]:checked').value === '1',
+    time: +document.querySelector('input[name=time]:checked').value,
+    emph: $('emph').checked };
+}
+function applyCfg(c) {
+  if (!c) return;
+  const r = document.querySelector(`input[name=level][value="${c.level}"]`); if (r) r.checked = true;
+  if (c.level === 'custom') { $('minSel').value = c.min; $('maxSel').value = c.max; }
+  const a = document.querySelector(`input[name=acc][value="${c.acc ? 1 : 0}"]`); if (a) a.checked = true;
+  const t = document.querySelector(`input[name=time][value="${c.time}"]`); if (t) t.checked = true;
+  $('emph').checked = !!c.emph;
+  $('customRange').hidden = c.level !== 'custom';
+}
+function newSeed() { return 1 + Math.floor(Math.random() * 99999); }
+
+// ---------- setup screen ----------
+function buildSetup() {
+  $('levels').innerHTML = LEVELS.map((l, i) =>
+    `<label><input type="radio" name="level" value="${l.id}" ${i === 0 ? 'checked' : ''}><b></b><small></small></label>`).join('');
+  const opts = []; for (let s = STEP_MIN; s <= STEP_MAX; s++) opts.push(`<option value="${s}">${noteName(s)}</option>`);
+  $('minSel').innerHTML = opts.join(''); $('maxSel').innerHTML = opts.join('');
+  $('minSel').value = 0; $('maxSel').value = 14;
+  document.querySelectorAll('input[name=level]').forEach(r => r.addEventListener('change', () => { $('customRange').hidden = r.value !== 'custom'; }));
+  $('seed').value = newSeed();
+  $('randSeed').addEventListener('click', () => { $('seed').value = newSeed(); });
+  $('startBtn').addEventListener('click', () => start(+$('seed').value || newSeed()));
+  $('clearHist').addEventListener('click', () => { store('staff.history', []); store('staff.miss', {}); renderHistory(); });
+  $('langBtn').addEventListener('click', () => setLang(lang === 'zh' ? 'en' : 'zh'));
+  applyCfg(load('staff.cfg', null));
+  applyLang();
+  renderHistory();
+}
+function histLevel(e) { return e.levelId ? I18N[lang].levelShort[e.levelId] : (e.level || ''); }
+function renderHistory() {
+  const h = load('staff.history', []);
+  const miss = load('staff.miss', {});
+  const hasMiss = Object.values(miss).some(v => v > 0);
+  $('emphWrap').hidden = !hasMiss;
+  if (!h.length) { $('histBody').innerHTML = `<div class="empty">${t('noHistory')}</div>`; return; }
+  const rows = h.slice(0, 20).map(e => {
+    const d = new Date(e.t);
+    const when = `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    return `<tr><td>${when}</td><td>${histLevel(e)}${e.acc ? ' ♯♭' : ''}</td><td>#${e.seed}</td><td><b>${e.score}</b>/${e.total}</td><td>${fmt(e.secs)}${e.timeout ? ' · ' + t('timeoutTag') : ''}</td></tr>`;
+  }).join('');
+  let missLine = '';
+  const top = Object.entries(miss).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]).slice(0, 8);
+  if (top.length) missLine = `<div class="hint" style="margin-top:8px">${t('oftenMissed')}${top.map(([k, v]) => `${k}×${v}`).join(lang === 'zh' ? '、' : ', ')}</div>`;
+  $('histBody').innerHTML = `<div class="tbl"><table><thead><tr><th>${t('hWhen')}</th><th>${t('hLevel')}</th><th>${t('hSeed')}</th><th>${t('hScore')}</th><th>${t('hTime')}</th></tr></thead><tbody>${rows}</tbody></table></div>${missLine}`;
+}
+
+// ---------- test ----------
+let lastResult = null;
+function start(s) {
+  cfg = readCfg(); store('staff.cfg', cfg);
+  seed = s; $('seed').value = s;
+  notes = makePage(cfg, seed);
+  answers = new Array(TOTAL).fill(null); cur = 0; pending = 0; graded = false; lastResult = null;
+  $('setup').hidden = true; $('test').hidden = false; $('result').hidden = true; $('keypad').hidden = false;
+  buildSheet(); buildKeys();
+  $('timer').hidden = false;
+  t0 = Date.now(); clearInterval(timerId); timerId = setInterval(tick, 250); tick();
+  window.scrollTo({ top: 0 });
+  updateBoxes();
+}
+function sheetHeadHTML() {
+  return `<b>${t('sheetTitle')} #${seed}</b><span>${levelName(cfg.level)}${cfg.acc ? ' · ' + t('withAcc') : ''} · ${noteName(cfg.min)}–${noteName(cfg.max)}</span>`;
+}
+function buildSheet() {
+  let html = `<div class="sheet-head" id="sheetHead">${sheetHeadHTML()}</div>`;
+  for (let r = 0; r < ROWS; r++) {
+    const slice = notes.slice(r * COLS, r * COLS + COLS);
+    html += `<div class="stave">${staveSVG(slice, cfg, r === ROWS - 1)}<div class="boxes">`;
+    for (let c = 0; c < COLS; c++) { const i = r * COLS + c; html += `<button class="box" type="button" data-i="${i}" aria-label="${t('questionLabel').replace('{n}', i + 1)}"></button>`; }
+    html += `</div></div>`;
+  }
+  $('sheet').innerHTML = html;
+  boxes = Array.from($('sheet').querySelectorAll('.box'));
+  boxes.forEach(b => b.addEventListener('click', () => { if (graded) return; cur = +b.dataset.i; updateBoxes(); }));
+}
+function refreshTestText() {
+  const sh = $('sheetHead'); if (sh) sh.innerHTML = sheetHeadHTML();
+  boxes.forEach((b, i) => b.setAttribute('aria-label', t('questionLabel').replace('{n}', i + 1)));
+  if (lastResult) renderResult(); else if (!graded) updateStatus();
+}
+function buildKeys() {
+  const k = $('keys'); k.classList.toggle('no-acc', !cfg.acc);
+  let html = '';
+  if (cfg.acc) html += `<button class="key acc" type="button" data-acc="-1">♭</button><button class="key acc" type="button" data-acc="1">♯</button>`;
+  html += LETTERS.map(l => `<button class="key" type="button" data-l="${l}">${l}</button>`).join('');
+  k.innerHTML = html;
+  k.querySelectorAll('[data-l]').forEach(b => b.addEventListener('click', () => answer(b.dataset.l)));
+  k.querySelectorAll('[data-acc]').forEach(b => b.addEventListener('click', () => setPending(+b.dataset.acc)));
+}
+function setPending(a) { pending = pending === a ? 0 : a; $('keys').querySelectorAll('[data-acc]').forEach(b => b.classList.toggle('on', +b.dataset.acc === pending)); }
+function answer(l) {
+  if (graded) return;
+  answers[cur] = { l, a: pending };
+  if (pending) setPending(0);
+  const next = answers.findIndex((v, i) => v === null && i > cur);
+  if (next >= 0) cur = next; else { const any = answers.findIndex(v => v === null); if (any >= 0) cur = any; }
+  updateBoxes();
+}
+function move(d) { if (graded) return; cur = (cur + d + TOTAL) % TOTAL; updateBoxes(); }
+function clearCur() { if (graded) return; if (answers[cur]) { answers[cur] = null; } else { cur = (cur - 1 + TOTAL) % TOTAL; answers[cur] = null; } updateBoxes(); }
+function updateStatus() { $('status').textContent = `${t('answered')} ${answers.filter(Boolean).length} / ${TOTAL}`; }
+function updateBoxes() {
+  boxes.forEach((b, i) => { b.textContent = ansStr(answers[i]); b.classList.toggle('cur', i === cur && !graded); });
+  updateStatus();
+  const el = boxes[cur]; if (el) el.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+}
+function tick() {
+  const el = $('timer'); const secs = (Date.now() - t0) / 1000;
+  if (!cfg.time) { el.textContent = fmt(secs); el.className = 'timer'; return; }
+  const left = cfg.time - secs;
+  el.textContent = fmt(Math.ceil(left));
+  el.className = 'timer' + (left <= 20 ? ' warn' : '');
+  if (left <= 0) grade(true);
+}
+function grade(timeout) {
+  if (graded) return;
+  graded = true; clearInterval(timerId);
+  const secs = Math.min((Date.now() - t0) / 1000, cfg.time || Infinity);
+  const miss = load('staff.miss', {});
+  let score = 0; const wrong = {};
+  notes.forEach((n, i) => {
+    const want = LETTERS[((n.step % 7) + 7) % 7], a = answers[i];
+    const ok = a && a.l === want && (a.a || 0) === n.acc;
+    const b = boxes[i]; b.classList.remove('cur');
+    const nm = noteName(n.step), key = want + accSym(n.acc) + nm.slice(-1);
+    if (ok) { score++; b.classList.add('ok'); if (miss[key] > 0) miss[key] = Math.max(0, miss[key] - 1); }
+    else {
+      b.classList.add('bad'); if (!a) b.classList.add('blank');
+      b.insertAdjacentHTML('beforeend', `<span class="fix">${want + accSym(n.acc)}</span>`);
+      wrong[key] = (wrong[key] || 0) + 1; miss[key] = (miss[key] || 0) + 1;
+    }
+  });
+  $('sheet').querySelectorAll('.boxes').forEach(b => b.classList.add('graded'));
+  store('staff.miss', miss);
+  const entry = { t: Date.now(), levelId: cfg.level, acc: cfg.acc, seed, score, total: TOTAL, secs: Math.round(secs), timeout: !!timeout };
+  const h = load('staff.history', []); h.unshift(entry); store('staff.history', h.slice(0, 100));
+  lastResult = { score, secs, wrong, timeout: !!timeout };
+  renderResult();
+  $('keypad').hidden = true; $('timer').hidden = true;
+  $('result').scrollIntoView({ block: 'start' });
+}
+function renderResult() {
+  const { score, secs, wrong, timeout } = lastResult;
+  const wrongList = Object.entries(wrong).sort((a, b) => b[1] - a[1]).map(([k, v]) => `<span>${k}${v > 1 ? ' ×' + v : ''}</span>`).join('');
+  const pct = score / TOTAL;
+  const verdict = timeout ? t('vTimeout') : pct === 1 ? t('vPerfect') : pct >= 0.9 ? t('vGreat') : pct >= 0.7 ? t('vGood') : t('vKeep');
+  $('result').innerHTML = `<div class="score"><b class="${pct >= 0.9 ? 'good' : pct < 0.7 ? 'bad' : ''}">${score} / ${TOTAL}</b><span>${verdict}</span></div>
+    <div class="meta">${t('timeUsed')} ${fmt(secs)}${cfg.time ? ' (' + t('limit') + ' ' + fmt(cfg.time) + ')' : ''} · ${levelName(cfg.level)} · ${t('seedShort')} #${seed}</div>
+    ${wrongList ? `<div class="wrong">${t('wrongNotes')}${wrongList}</div>` : ''}
+    <div class="actions"><button class="btn primary" id="againNew" type="button">${t('againNew')}</button><button class="btn" id="againSame" type="button">${t('againSame')}</button><button class="btn" id="backBtn" type="button">${t('back')}</button></div>`;
+  $('result').hidden = false;
+  $('againNew').addEventListener('click', () => start(newSeed()));
+  $('againSame').addEventListener('click', () => start(seed));
+  $('backBtn').addEventListener('click', backToSetup);
+}
+function backToSetup() {
+  clearInterval(timerId); graded = true;
+  $('test').hidden = true; $('keypad').hidden = true; $('timer').hidden = true; $('setup').hidden = false;
+  renderHistory(); window.scrollTo({ top: 0 });
+}
+
+$('prevBtn').addEventListener('click', () => move(-1));
+$('nextBtn').addEventListener('click', () => move(1));
+$('clearBtn').addEventListener('click', clearCur);
+$('submitBtn').addEventListener('click', () => grade(false));
+document.addEventListener('keydown', e => {
+  if ($('test').hidden || graded || e.ctrlKey || e.metaKey || e.altKey) return;
+  const k = e.key;
+  if (/^[a-gA-G]$/.test(k)) { answer(k.toUpperCase()); e.preventDefault(); }
+  else if (k === '#' || k === '+' || k === '=') { if (cfg.acc) setPending(1); e.preventDefault(); }
+  else if (k === '-' || k === '_') { if (cfg.acc) setPending(-1); e.preventDefault(); }
+  else if (k === 'Backspace' || k === 'Delete') { clearCur(); e.preventDefault(); }
+  else if (k === 'ArrowLeft' || k === 'ArrowUp') { move(-1); e.preventDefault(); }
+  else if (k === 'ArrowRight' || k === 'ArrowDown') { move(1); e.preventDefault(); }
+  else if (k === 'Enter') { if (answers.every(Boolean)) grade(false); e.preventDefault(); }
+});
+buildSetup();
+</script>
+
+</body>
+</html>
