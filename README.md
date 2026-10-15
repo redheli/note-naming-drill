@@ -1,6 +1,6 @@
 # Note Naming Drill · 五线谱识谱练习
 
-Timed treble-clef note-naming practice for young flute students. One HTML file, no build step, works offline.
+Timed note-naming practice in treble clef, bass clef or both, for young flute and piano students. One HTML file, no build step, works offline.
 
 **Live page:** https://redheli.github.io/note-naming-drill/
 
@@ -8,7 +8,8 @@ Timed treble-clef note-naming practice for young flute students. One HTML file, 
 
 - Each page is a worksheet of 6 staves × 5 whole notes (30 questions), like a printed "Name the Notes" sheet.
 - Countdown timer with a 2-minute default (1:00 / 1:30 / 3:00 / no limit). Time's up auto-submits.
-- Four difficulty levels for flute range (E4–F5 up to C4–G6) plus a custom min/max range.
+- Treble clef, bass clef, or mixed (three staves of each per page, shuffled).
+- Four difficulty levels per clef (treble E4–F5 up to C4–G6, bass G2–A3 up to A1–G4) plus a custom min/max range.
 - Optional sharps and flats (answers like F♯, B♭).
 - Every page has a number. The same number always produces the same 30 notes, so a page can be redone or assigned.
 - Instant grading with the correct name shown under each miss, a per-page score, and a list of missed notes.
@@ -26,6 +27,6 @@ Open `index.html` in any browser, or visit the GitHub Pages link above.
 
 ## Credits
 
-The treble clef, notehead, sharp and flat glyphs are vector outlines taken from the
+The treble clef, bass clef, notehead, sharp and flat glyphs are vector outlines taken from the
 [Noto Music](https://fonts.google.com/noto/specimen/Noto+Music) font, used under the
 [SIL Open Font License 1.1](https://openfontlicense.org/). Everything else is MIT licensed (see LICENSE).

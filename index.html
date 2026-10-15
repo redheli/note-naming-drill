@@ -90,6 +90,9 @@ button { font: inherit; cursor: pointer; touch-action: manipulation; -webkit-use
 .chips label { border: 1px solid var(--border); background: var(--card); border-radius: 999px; padding: 6px 14px; cursor: pointer; }
 .chips label:has(input:checked) { border-color: var(--accent); background: var(--sel); color: #1c1a17; }
 .chips input { position: absolute; opacity: 0; width: 0; height: 0; }
+.chips.clefs label { display: inline-flex; align-items: center; gap: 6px; }
+.chips i { display: inline-block; height: 1.5em; width: .75em; vertical-align: middle; }
+.chips i svg { height: 100%; width: 100%; display: block; }
 .row-inline { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
 select, input[type=number] { font: inherit; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--card); color: var(--fg); }
 input[type=number] { width: 7.5em; }
@@ -188,6 +191,14 @@ input[type=number] { width: 7.5em; }
 
   <section class="setup" id="setup">
     <div class="field">
+      <div class="label"><span data-i18n="clef">谱号</span><span data-i18n="clefHint">混合时每行随机用一种谱号</span></div>
+      <div class="chips clefs">
+        <label><input type="radio" name="clef" value="treble" checked><i data-clef-ico="treble"></i><span data-i18n="clefTreble">高音谱号</span></label>
+        <label><input type="radio" name="clef" value="bass"><i data-clef-ico="bass"></i><span data-i18n="clefBass">低音谱号</span></label>
+        <label><input type="radio" name="clef" value="mixed"><i data-clef-ico="treble"></i><i data-clef-ico="bass"></i><span data-i18n="clefMixed">两种混合</span></label>
+      </div>
+    </div>
+    <div class="field">
       <div class="label"><span data-i18n="level">难度</span><span data-i18n="levelHint">长笛最低音是中央 C(C4)</span></div>
       <div class="levels" id="levels"></div>
       <div class="row-inline" id="customRange" hidden>
@@ -252,6 +263,7 @@ input[type=number] { width: 7.5em; }
 <script>
 const GLYPH={
   clef:"M314 801Q300 854 291.0 906.0Q282 958 282 1012Q282 1059 288.5 1100.5Q295 1142 307 1177Q320 1217 341.0 1252.5Q362 1288 385.5 1311.0Q409 1334 427 1334Q451 1334 493 1249Q514 1206 524.0 1156.0Q534 1106 534 1049Q534 978 515.0 907.5Q496 837 459.5 775.0Q423 713 372 666L407 498Q422 500 432.0 501.0Q442 502 447 502Q508 502 556.0 467.5Q604 433 632.5 377.0Q661 321 661 254Q661 177 621.5 115.5Q582 54 503 25Q508 8 532 -117Q538 -147 541.0 -164.5Q544 -182 545.0 -195.0Q546 -208 546 -225Q546 -275 521.5 -314.5Q497 -354 455.5 -376.0Q414 -398 363 -398Q311 -398 271.0 -378.5Q231 -359 208.0 -324.5Q185 -290 185 -245Q185 -197 211.5 -165.0Q238 -133 287 -133Q329 -133 355.5 -163.5Q382 -194 382 -236Q382 -272 357.0 -299.0Q332 -326 292 -326H282Q308 -365 364 -365Q433 -365 472.0 -320.0Q511 -275 511 -205Q511 -188 507.0 -159.5Q503 -131 493 -91Q483 -51 477.5 -25.0Q472 1 470 12Q436 2 390 2Q304 2 222 52Q142 102 96.0 184.0Q50 266 50 361Q50 451 91 530Q132 609 192.5 675.0Q253 741 314 801ZM341 826Q364 838 390.0 870.5Q416 903 440.0 945.0Q464 987 479.0 1029.5Q494 1072 494 1106Q494 1142 483.0 1163.0Q472 1184 445 1184Q421 1184 398.5 1162.0Q376 1140 358.5 1103.5Q341 1067 331.0 1022.0Q321 977 321 930Q321 898 327.5 872.0Q334 846 341 826ZM398 379Q371 373 347.0 353.5Q323 334 308.5 306.5Q294 279 294 248Q294 223 307.0 196.5Q320 170 339 154Q352 142 365 136Q380 129 380 123Q380 120 370 117Q332 126 301.5 151.0Q271 176 253.5 211.5Q236 247 236 287Q236 330 253.5 370.0Q271 410 302.5 442.0Q334 474 374 490L345 641Q229 547 174.5 456.5Q120 366 120 277Q120 212 154.0 156.0Q188 100 247.0 65.5Q306 31 380 31Q400 31 420.5 35.0Q441 39 464 45ZM495 55Q593 97 593 227Q593 270 571.0 305.5Q549 341 512.0 362.0Q475 383 429 383Z",
+  fclef:"M50 123Q216 231 288 301Q336 348 373.0 408.5Q410 469 431.5 536.0Q453 603 453 669Q453 728 435.0 773.5Q417 819 383.0 845.0Q349 871 302 871Q284 871 264.5 867.0Q245 863 224 855Q181 839 158.0 813.5Q135 788 135 765Q135 756 143.0 752.0Q151 748 158 748Q168 748 183 752Q190 754 196.5 755.0Q203 756 210 756Q248 756 272.0 733.5Q296 711 296 674Q296 638 266.0 612.0Q236 586 195 586Q146 586 111.0 617.0Q76 648 76 697Q76 756 109.0 802.0Q142 848 198.5 874.0Q255 900 324 900Q400 900 460.0 867.0Q520 834 555.5 776.5Q591 719 591 646Q591 551 538 464Q511 419 476.5 379.0Q442 339 389.0 297.5Q336 256 256.0 208.0Q176 160 57 101ZM648.0 495.5Q632 511 632.0 534.0Q632 557 648.0 573.0Q664 589 687.0 589.0Q710 589 726.0 573.0Q742 557 742.0 534.0Q742 511 726.0 495.5Q710 480 687.0 480.0Q664 480 648.0 495.5ZM648.0 715.5Q632 731 632.0 754.0Q632 777 648.0 793.0Q664 809 687.0 809.0Q710 809 726.0 793.0Q742 777 742.0 754.0Q742 731 726.0 715.5Q710 700 687.0 700.0Q664 700 648.0 715.5Z",
   whole:"M50 135Q50 172 77.0 200.0Q104 228 150.5 244.0Q197 260 253 260Q310 260 358.0 244.5Q406 229 435.0 201.0Q464 173 464 135Q464 96 436.0 67.5Q408 39 361.5 23.5Q315 8 259 8Q203 8 155.5 23.0Q108 38 79.0 66.5Q50 95 50 135ZM280 28Q314 28 326.5 53.0Q339 78 339 112Q339 147 324.5 176.0Q310 205 286.0 222.5Q262 240 232 240Q198 240 186.5 215.0Q175 190 175 156Q175 122 189.0 93.0Q203 64 226.5 46.0Q250 28 280 28Z",
   sharp:"M502 82 404 39V-135H357V20L196 -58V-233H149V-77L51 -124V-46L149 0V245L51 198V276L149 323V482H196V342L357 420V590H404V439L502 485V408L404 361V116L502 160ZM357 97V342L196 264V19Z",
   flat:"M51 524H88V179Q117 220 148.0 243.5Q179 267 209 267Q250 267 273.0 242.0Q296 217 296 173Q296 115 263 70Q241 40 208.0 19.0Q175 -2 138.5 -13.5Q102 -25 69 -25H51ZM88 141V3Q115 3 153 25Q192 47 215.5 83.0Q239 119 239 162Q239 191 230.5 206.5Q222 222 199 222Q171 222 140.5 198.0Q110 174 88 141Z",
@@ -261,19 +273,24 @@ const LETTERS = ['C','D','E','F','G','A','B'];
 const SHARP_OK = new Set(['C','D','F','G','A']);
 const FLAT_OK  = new Set(['D','E','G','A','B']);
 const ROWS = 6, COLS = 5, TOTAL = ROWS * COLS;
-const LEVELS = [
-  { id:'l1', min:2,  max:10 },
-  { id:'l2', min:0,  max:11 },
-  { id:'l3', min:0,  max:14 },
-  { id:'l4', min:0,  max:18 },
-  { id:'custom', min:0, max:14 },
-];
+// Steps count letters from middle C (step 0 = C4). The bottom line is E4 on the treble staff and G2 on the bass staff.
+const CLEF_BASE = { treble: 2, bass: -10 };
+const LEVEL_IDS = ['l1', 'l2', 'l3', 'l4', 'custom'];
+const LEVELS = {
+  treble: { l1:[2, 10], l2:[0, 11], l3:[0, 14], l4:[0, 18], custom:[0, 14] },        // E4–F5, C4–G5, C4–C6, C4–G6
+  bass:   { l1:[-10, -2], l2:[-12, 0], l3:[-14, 2], l4:[-16, 4], custom:[-12, 0] },  // G2–A3, E2–C4, C2–E4, A1–G4
+};
+const CUSTOM_RANGE = { treble: [-2, 21], bass: [-16, 5] }; // A3..C7, A1..A4
 
 // ---------- language ----------
 const I18N = {
   zh: {
-    title:'五线谱识谱练习', subtitle:'长笛 · 高音谱号', langBtn:'EN',
-    level:'难度', levelHint:'长笛最低音是中央 C(C4)', lowest:'最低', highest:'最高',
+    title:'五线谱识谱练习', langBtn:'EN',
+    subtitle: { treble:'长笛 · 高音谱号', bass:'低音谱号', mixed:'高音 + 低音谱号' },
+    clef:'谱号', clefHint:'混合时每行随机用一种谱号', clefTreble:'高音谱号', clefBass:'低音谱号', clefMixed:'两种混合',
+    clefShort: { treble:'高音', bass:'低音', mixed:'混合' },
+    level:'难度', lowest:'最低', highest:'最高',
+    levelHint: { treble:'长笛最低音是中央 C(C4)', bass:'中央 C(C4)在低音谱号的上加一线', mixed:'每行随机用高音或低音谱号' },
     acc:'升降号', accHint:'答案要写成 F♯、B♭ 这样', accOff:'不出现', accOn:'出现 ♯ 和 ♭',
     time:'时间', timeHint:'一页 30 题,目标 2 分钟', untimed:'不计时',
     seed:'题目编号', seedHint:'同一个编号出同一套题,可以重做', newSeed:'换一个', emph:'多出以前答错的音',
@@ -287,17 +304,37 @@ const I18N = {
     againNew:'再来一页(新题)', againSame:'重做这一页', back:'返回设置',
     fitOn:'整页', fitOff:'原大', fitTip:'切换:整页显示 / 原始大小(可滚动)',
     levels: {
-      l1:['第1级 · 线与间','E4–F5,五条线、四个间'],
-      l2:['第2级 · 加中央C和高音G','C4–G5,含下加一线'],
-      l3:['第3级 · 上加线','C4–C6,上加两线'],
-      l4:['第4级 · 高音区','C4–G6,长笛第三个八度'],
-      custom:['自定义范围','自己选最低音和最高音'],
+      treble: {
+        l1:['第1级 · 线与间','E4–F5,五条线、四个间'],
+        l2:['第2级 · 加中央C和高音G','C4–G5,含下加一线'],
+        l3:['第3级 · 上加线','C4–C6,上加两线'],
+        l4:['第4级 · 高音区','C4–G6,长笛第三个八度'],
+        custom:['自定义范围','自己选最低音和最高音'],
+      },
+      bass: {
+        l1:['第1级 · 线与间','G2–A3,五条线、四个间'],
+        l2:['第2级 · 加中央C和低音E','E2–C4,上下各加一线'],
+        l3:['第3级 · 加线','C2–E4,上下各加两线'],
+        l4:['第4级 · 宽音域','A1–G4,上下各加三线'],
+        custom:['自定义范围','自己选最低音和最高音'],
+      },
+      mixed: {
+        l1:['第1级 · 线与间','高音 E4–F5,低音 G2–A3'],
+        l2:['第2级 · 加一条加线','高音 C4–G5,低音 E2–C4'],
+        l3:['第3级 · 加线','高音 C4–C6,低音 C2–E4'],
+        l4:['第4级 · 宽音域','高音 C4–G6,低音 A1–G4'],
+        custom:['自定义范围','自己选最低音和最高音'],
+      },
     },
     levelShort: { l1:'第1级', l2:'第2级', l3:'第3级', l4:'第4级', custom:'自定义' },
   },
   en: {
-    title:'Staff Reading Practice', subtitle:'Flute · Treble clef', langBtn:'中文',
-    level:'Level', levelHint:'The flute\'s lowest note is middle C (C4)', lowest:'Lowest', highest:'Highest',
+    title:'Staff Reading Practice', langBtn:'中文',
+    subtitle: { treble:'Flute · Treble clef', bass:'Bass clef', mixed:'Treble + bass clef' },
+    clef:'Clef', clefHint:'Mixed: each stave gets a random clef', clefTreble:'Treble clef', clefBass:'Bass clef', clefMixed:'Mixed',
+    clefShort: { treble:'Treble', bass:'Bass', mixed:'Mixed' },
+    level:'Level', lowest:'Lowest', highest:'Highest',
+    levelHint: { treble:'The flute\'s lowest note is middle C (C4)', bass:'Middle C (C4) sits on the first ledger line above the bass staff', mixed:'Each stave is randomly treble or bass' },
     acc:'Sharps & flats', accHint:'Answers look like F♯ or B♭', accOff:'None', accOn:'Include ♯ and ♭',
     time:'Timer', timeHint:'30 notes per page, aim for 2 minutes', untimed:'No limit',
     seed:'Page number', seedHint:'The same number always gives the same page, so you can redo it', newSeed:'New page', emph:'Show missed notes more often',
@@ -311,32 +348,49 @@ const I18N = {
     againNew:'New page', againSame:'Redo this page', back:'Back to settings',
     fitOn:'Fit', fitOff:'Full', fitTip:'Toggle: fit whole page on screen / full size with scrolling',
     levels: {
-      l1:['Level 1 · Lines & spaces','E4–F5, the five lines and four spaces'],
-      l2:['Level 2 · Middle C to high G','C4–G5, one ledger line below'],
-      l3:['Level 3 · Ledger lines','C4–C6, up to two ledger lines above'],
-      l4:['Level 4 · High register','C4–G6, the flute\'s third octave'],
-      custom:['Custom range','Pick your own lowest and highest note'],
+      treble: {
+        l1:['Level 1 · Lines & spaces','E4–F5, the five lines and four spaces'],
+        l2:['Level 2 · Middle C to high G','C4–G5, one ledger line below'],
+        l3:['Level 3 · Ledger lines','C4–C6, up to two ledger lines above'],
+        l4:['Level 4 · High register','C4–G6, the flute\'s third octave'],
+        custom:['Custom range','Pick your own lowest and highest note'],
+      },
+      bass: {
+        l1:['Level 1 · Lines & spaces','G2–A3, the five lines and four spaces'],
+        l2:['Level 2 · Low E to middle C','E2–C4, one ledger line above and below'],
+        l3:['Level 3 · Ledger lines','C2–E4, up to two ledger lines each way'],
+        l4:['Level 4 · Wide range','A1–G4, up to three ledger lines each way'],
+        custom:['Custom range','Pick your own lowest and highest note'],
+      },
+      mixed: {
+        l1:['Level 1 · Lines & spaces','Treble E4–F5, bass G2–A3'],
+        l2:['Level 2 · One ledger line','Treble C4–G5, bass E2–C4'],
+        l3:['Level 3 · Ledger lines','Treble C4–C6, bass C2–E4'],
+        l4:['Level 4 · Wide range','Treble C4–G6, bass A1–G4'],
+        custom:['Custom range','Pick your own lowest and highest note'],
+      },
     },
     levelShort: { l1:'Level 1', l2:'Level 2', l3:'Level 3', l4:'Level 4', custom:'Custom' },
   },
 };
 let lang = load('staff.lang', null) || (navigator.language && navigator.language.toLowerCase().startsWith('zh') ? 'zh' : 'en');
 function t(k) { return I18N[lang][k]; }
-function levelName(id) { return I18N[lang].levels[id][0]; }
+function curClef() { return document.querySelector('input[name=clef]:checked').value; }
+function levelName(id, clef) { return I18N[lang].levels[clef][id][0]; }
 function applyLang() {
   document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
   document.title = t('title');
-  document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
+  const clef = curClef();
+  // Strings that depend on the clef (subtitle, level hint) are objects keyed by clef.
+  document.querySelectorAll('[data-i18n]').forEach(el => { const v = t(el.dataset.i18n); el.textContent = typeof v === 'string' ? v : v[clef]; });
   document.querySelectorAll('#levels label').forEach(l => {
-    const id = l.querySelector('input').value; const [n, d] = I18N[lang].levels[id];
+    const id = l.querySelector('input').value; const [n, d] = I18N[lang].levels[clef][id];
     l.querySelector('b').textContent = n; l.querySelector('small').textContent = d;
   });
   const lb = document.getElementById('langBtn'); if (lb) lb.textContent = t('langBtn');
   if (typeof updateFitBtn === 'function' && document.getElementById('fitBtn')) updateFitBtn();
 }
 function setLang(l) { lang = l; store('staff.lang', l); applyLang(); renderHistory(); if (cfg && !document.getElementById('test').hidden) { refreshTestText(); } }
-const STEP_MIN = -2, STEP_MAX = 21; // A3 .. C7
-
 function noteName(step) { return LETTERS[((step % 7) + 7) % 7] + (4 + Math.floor(step / 7)); }
 function accSym(a) { return a === 1 ? '♯' : a === -1 ? '♭' : ''; }
 function ansStr(x) { return x ? x.l + accSym(x.a) : ''; }
@@ -349,10 +403,22 @@ function fmt(s) { s = Math.max(0, Math.round(s)); return Math.floor(s / 60) + ':
 function makePage(cfg, seed) {
   const rng = mulberry32(seed);
   const miss = cfg.emph ? load('staff.miss', {}) : {};
-  const steps = []; for (let s = cfg.min; s <= cfg.max; s++) steps.push(s);
-  const weights = steps.map(s => 1 + Math.min(4, miss[noteName(s)] || 0) * 1.5);
+  const pools = {};
+  for (const c of cfg.clefs) {
+    const [min, max] = cfg.ranges[c];
+    const steps = []; for (let s = min; s <= max; s++) steps.push(s);
+    pools[c] = { steps, weights: steps.map(s => 1 + Math.min(4, miss[noteName(s)] || 0) * 1.5) };
+  }
+  // Mixed pages get three staves of each clef, shuffled by the seed. Single-clef pages draw
+  // no extra random numbers, so an old page number still produces the same notes.
+  const rowClefs = [];
+  for (let r = 0; r < ROWS; r++) rowClefs.push(cfg.clefs[r % cfg.clefs.length]);
+  if (cfg.clefs.length > 1) {
+    for (let i = ROWS - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [rowClefs[i], rowClefs[j]] = [rowClefs[j], rowClefs[i]]; }
+  }
   const notes = []; let prev = null;
   for (let i = 0; i < TOTAL; i++) {
+    const { steps, weights } = pools[rowClefs[Math.floor(i / COLS)]];
     let step;
     for (let tries = 0; tries < 20; tries++) {
       let r = rng() * weights.reduce((a, b) => a + b, 0);
@@ -370,7 +436,7 @@ function makePage(cfg, seed) {
     }
     notes.push({ step, acc }); prev = step;
   }
-  return notes;
+  return { notes, rowClefs };
 }
 
 // ---------- staff rendering ----------
@@ -379,11 +445,13 @@ const SP = 10, SCALE = 0.04;
 const GEO_WIDE = { X0: 70, CW: 130, W: 720 }, GEO_NARROW = { X0: 54, CW: 98, W: 544 };
 let geo = GEO_WIDE, narrowNow = null;
 function isNarrow() { return window.innerWidth < 600; }
-function staveSVG(notes, cfg, last) {
+function staveSVG(notes, clef, last) {
   const { X0, CW, W } = geo;
-  const poss = notes.map(n => n.step - 2);
+  const base = CLEF_BASE[clef];
+  const poss = notes.map(n => n.step - base);
   const maxPos = Math.max(8, Math.max(...poss) + 1), minPos = Math.min(0, Math.min(...poss) - 1);
-  // Leave room for the clef (it reaches 14 above the top line and 16 below the bottom line).
+  // Leave room for the treble clef (it reaches 14 above the top line and 16 below the bottom line);
+  // the bass clef stays within the staff.
   const bottom = Math.max(9 + maxPos * 5, 56);
   const H = bottom + Math.max((-minPos) * 5 + 8, 18);
   let s = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">`;
@@ -393,10 +461,12 @@ function staveSVG(notes, cfg, last) {
   s += `<line x1="${W - 6}" y1="${bottom - 4 * SP}" x2="${W - 6}" y2="${bottom}"/>`;
   if (last) s += `<line x1="${W - 10}" y1="${bottom - 4 * SP}" x2="${W - 10}" y2="${bottom}" stroke-width="3"/>`;
   s += `</g>`;
-  s += `<path d="${GLYPH.clef}" fill="var(--ink)" transform="translate(12 ${bottom}) scale(${SCALE} ${-SCALE})"/>`;
+  // The bass-clef outline has its F line at y=650 in font units (the two dots straddle it), so shift it up by 4 to sit on the fourth line.
+  if (clef === 'bass') s += `<path d="${GLYPH.fclef}" fill="var(--ink)" transform="translate(12 ${bottom - 4}) scale(${SCALE} ${-SCALE})"/>`;
+  else s += `<path d="${GLYPH.clef}" fill="var(--ink)" transform="translate(12 ${bottom}) scale(${SCALE} ${-SCALE})"/>`;
   notes.forEach((n, i) => {
     const cx = X0 + CW * i + CW / 2;
-    const pos = n.step - 2;
+    const pos = n.step - base;
     const cy = bottom - pos * 5;
     s += `<g stroke="var(--ink)" stroke-width="1.2">`;
     for (let p = -2; p >= pos; p -= 2) s += `<line x1="${cx - 13}" y1="${bottom - p * 5}" x2="${cx + 13}" y2="${bottom - p * 5}"/>`;
@@ -411,37 +481,76 @@ function staveSVG(notes, cfg, last) {
 
 // ---------- state ----------
 const $ = id => document.getElementById(id);
-let cfg = null, seed = 0, notes = [], answers = [], cur = 0, pending = 0, graded = false;
+let cfg = null, seed = 0, notes = [], rowClefs = [], answers = [], cur = 0, pending = 0, graded = false;
 let t0 = 0, timerId = null, boxes = [];
 
+function curLevel() { return document.querySelector('input[name=level]:checked').value; }
 function readCfg() {
-  const lv = LEVELS.find(l => l.id === document.querySelector('input[name=level]:checked').value);
-  let min = lv.min, max = lv.max;
-  if (lv.id === 'custom') { min = +$('minSel').value; max = +$('maxSel').value; if (min > max) [min, max] = [max, min]; }
-  return { level: lv.id, min, max,
+  const clef = curClef(), level = curLevel();
+  const clefs = clef === 'mixed' ? ['treble', 'bass'] : [clef];
+  const ranges = {};
+  for (const c of clefs) {
+    let [min, max] = LEVELS[c][level];
+    if (level === 'custom') { min = +$('minSel').value; max = +$('maxSel').value; if (min > max) [min, max] = [max, min]; }
+    ranges[c] = [min, max];
+  }
+  return { clef, clefs, ranges, level,
     acc: document.querySelector('input[name=acc]:checked').value === '1',
     time: +document.querySelector('input[name=time]:checked').value,
     emph: $('emph').checked };
 }
 function applyCfg(c) {
   if (!c) return;
+  const clef = c.clef || 'treble'; // pages saved before the clef option existed were treble
+  const cr = document.querySelector(`input[name=clef][value="${clef}"]`); if (cr) cr.checked = true;
   const r = document.querySelector(`input[name=level][value="${c.level}"]`); if (r) r.checked = true;
-  if (c.level === 'custom') { $('minSel').value = c.min; $('maxSel').value = c.max; }
+  syncClef();
+  if (c.level === 'custom' && clef !== 'mixed') {
+    const [min, max] = (c.ranges && c.ranges[clef]) || [c.min, c.max];
+    if (min != null) { $('minSel').value = min; $('maxSel').value = max; }
+  }
   const a = document.querySelector(`input[name=acc][value="${c.acc ? 1 : 0}"]`); if (a) a.checked = true;
   const t = document.querySelector(`input[name=time][value="${c.time}"]`); if (t) t.checked = true;
   $('emph').checked = !!c.emph;
-  $('customRange').hidden = c.level !== 'custom';
+}
+// Rebuild the custom-range menus for a clef, keeping the current choice when it is still in range.
+function fillCustomSel(clef) {
+  const [lo, hi] = CUSTOM_RANGE[clef], def = LEVELS[clef].custom;
+  const opts = []; for (let s = lo; s <= hi; s++) opts.push(`<option value="${s}">${noteName(s)}</option>`);
+  [['minSel', def[0]], ['maxSel', def[1]]].forEach(([id, d]) => {
+    const el = $(id), old = +el.value;
+    el.innerHTML = opts.join('');
+    el.value = (el.value !== '' && old >= lo && old <= hi) ? old : d;
+    if (el.value === '') el.value = d;
+  });
+  if (+$('minSel').value > +$('maxSel').value) { $('minSel').value = def[0]; $('maxSel').value = def[1]; }
+}
+// The clef choice drives the level descriptions, the hint texts and the custom-range menus.
+// Mixed pages have no custom range (one range cannot suit both staves), so that card is hidden.
+function syncClef() {
+  const clef = curClef(), mixed = clef === 'mixed';
+  const customCard = document.querySelector('#levels label[data-level="custom"]');
+  customCard.hidden = mixed;
+  if (mixed && curLevel() === 'custom') document.querySelector('input[name=level][value="l1"]').checked = true;
+  if (!mixed) fillCustomSel(clef);
+  $('customRange').hidden = mixed || curLevel() !== 'custom';
+  applyLang();
+}
+function clefIcon(clef) {
+  // Same coordinates as the worksheet: baseline on the bottom line, 250 font units per space.
+  const lines = [0, 1, 2, 3, 4].map(k => `<line x1="0" x2="800" y1="${1400 - k * 250}" y2="${1400 - k * 250}"/>`).join('');
+  const d = clef === 'bass' ? GLYPH.fclef : GLYPH.clef, dy = clef === 'bass' ? -100 : 0;
+  return `<svg viewBox="0 0 800 1900" aria-hidden="true"><g stroke="currentColor" stroke-width="28">${lines}</g><path fill="currentColor" d="${d}" transform="translate(60 ${1400 + dy}) scale(1 -1)"/></svg>`;
 }
 function newSeed() { return 1 + Math.floor(Math.random() * 99999); }
 
 // ---------- setup screen ----------
 function buildSetup() {
-  $('levels').innerHTML = LEVELS.map((l, i) =>
-    `<label><input type="radio" name="level" value="${l.id}" ${i === 0 ? 'checked' : ''}><b></b><small></small></label>`).join('');
-  const opts = []; for (let s = STEP_MIN; s <= STEP_MAX; s++) opts.push(`<option value="${s}">${noteName(s)}</option>`);
-  $('minSel').innerHTML = opts.join(''); $('maxSel').innerHTML = opts.join('');
-  $('minSel').value = 0; $('maxSel').value = 14;
+  $('levels').innerHTML = LEVEL_IDS.map((id, i) =>
+    `<label data-level="${id}"><input type="radio" name="level" value="${id}" ${i === 0 ? 'checked' : ''}><b></b><small></small></label>`).join('');
+  document.querySelectorAll('[data-clef-ico]').forEach(el => { el.innerHTML = clefIcon(el.dataset.clefIco); });
   document.querySelectorAll('input[name=level]').forEach(r => r.addEventListener('change', () => { $('customRange').hidden = r.value !== 'custom'; }));
+  document.querySelectorAll('input[name=clef]').forEach(r => r.addEventListener('change', syncClef));
   $('seed').value = newSeed();
   $('randSeed').addEventListener('click', () => { $('seed').value = newSeed(); });
   $('startBtn').addEventListener('click', () => start(+$('seed').value || newSeed()));
@@ -449,10 +558,10 @@ function buildSetup() {
   $('langBtn').addEventListener('click', () => setLang(lang === 'zh' ? 'en' : 'zh'));
   $('fitBtn').addEventListener('click', () => { fitPref = !fitPref; store('staff.fit', fitPref); updateFitBtn(); fitSheet(); window.scrollTo({ top: 0 }); });
   applyCfg(load('staff.cfg', null));
-  applyLang();
+  syncClef();
   renderHistory();
 }
-function histLevel(e) { return e.levelId ? I18N[lang].levelShort[e.levelId] : (e.level || ''); }
+function histLevel(e) { return e.levelId ? t('clefShort')[e.clef || 'treble'] + ' ' + I18N[lang].levelShort[e.levelId] : (e.level || ''); }
 function renderHistory() {
   const h = load('staff.history', []);
   const miss = load('staff.miss', {});
@@ -475,7 +584,7 @@ let lastResult = null;
 function start(s) {
   cfg = readCfg(); store('staff.cfg', cfg);
   seed = s; $('seed').value = s;
-  notes = makePage(cfg, seed);
+  ({ notes, rowClefs } = makePage(cfg, seed));
   answers = new Array(TOTAL).fill(null); cur = 0; pending = 0; graded = false; lastResult = null; overTime = false;
   $('setup').hidden = true; $('test').hidden = false; $('result').hidden = true; $('keypad').hidden = false;
   buildSheet(); buildKeys();
@@ -509,8 +618,11 @@ function fitSheet() {
 }
 let rzTimer = null;
 window.addEventListener('resize', () => { clearTimeout(rzTimer); rzTimer = setTimeout(fitSheet, 120); });
+function rangeText() {
+  return cfg.clefs.map(c => (cfg.clefs.length > 1 ? t('clefShort')[c] + ' ' : '') + noteName(cfg.ranges[c][0]) + '–' + noteName(cfg.ranges[c][1])).join(' · ');
+}
 function sheetHeadHTML() {
-  return `<b>${t('sheetTitle')} #${seed}</b><span>${levelName(cfg.level)}${cfg.acc ? ' · ' + t('withAcc') : ''} · ${noteName(cfg.min)}–${noteName(cfg.max)}</span>`;
+  return `<b>${t('sheetTitle')} #${seed}</b><span>${levelName(cfg.level, cfg.clef)}${cfg.acc ? ' · ' + t('withAcc') : ''} · ${rangeText()}</span>`;
 }
 function buildSheet() {
   narrowNow = isNarrow(); geo = narrowNow ? GEO_NARROW : GEO_WIDE;
@@ -518,7 +630,7 @@ function buildSheet() {
   let html = `<div class="sheet-head" id="sheetHead">${sheetHeadHTML()}</div><div class="staves">`;
   for (let r = 0; r < ROWS; r++) {
     const slice = notes.slice(r * COLS, r * COLS + COLS);
-    html += `<div class="stave">${staveSVG(slice, cfg, r === ROWS - 1)}<div class="boxes" style="margin-left:${boxesMargin}">`;
+    html += `<div class="stave">${staveSVG(slice, rowClefs[r], r === ROWS - 1)}<div class="boxes" style="margin-left:${boxesMargin}">`;
     for (let c = 0; c < COLS; c++) { const i = r * COLS + c; html += `<button class="box" type="button" data-i="${i}" aria-label="${t('questionLabel').replace('{n}', i + 1)}"></button>`; }
     html += `</div></div>`;
   }
@@ -599,7 +711,7 @@ function grade() {
   });
   $('sheet').querySelectorAll('.boxes').forEach(b => b.classList.add('graded'));
   store('staff.miss', miss);
-  const entry = { t: Date.now(), levelId: cfg.level, acc: cfg.acc, seed, score, total: TOTAL, secs: Math.round(secs), timeout: !!timeout };
+  const entry = { t: Date.now(), clef: cfg.clef, levelId: cfg.level, acc: cfg.acc, seed, score, total: TOTAL, secs: Math.round(secs), timeout: !!timeout };
   const h = load('staff.history', []); h.unshift(entry); store('staff.history', h.slice(0, 100));
   lastResult = { score, secs, wrong, timeout: !!timeout };
   renderResult();
@@ -613,7 +725,7 @@ function renderResult() {
   const pct = score / TOTAL;
   const verdict = pct === 1 ? t('vPerfect') : pct >= 0.9 ? t('vGreat') : pct >= 0.7 ? t('vGood') : t('vKeep');
   $('result').innerHTML = `<div class="score"><b class="${pct >= 0.9 ? 'good' : pct < 0.7 ? 'bad' : ''}">${score} / ${TOTAL}</b><span>${verdict}</span></div>
-    <div class="meta">${t('timeUsed')} ${fmt(secs)}${cfg.time ? ' (' + t('limit') + ' ' + fmt(cfg.time) + (timeout ? ', ' + t('overTime') : '') + ')' : ''} · ${levelName(cfg.level)} · ${t('seedShort')} #${seed}</div>
+    <div class="meta">${t('timeUsed')} ${fmt(secs)}${cfg.time ? ' (' + t('limit') + ' ' + fmt(cfg.time) + (timeout ? ', ' + t('overTime') : '') + ')' : ''} · ${t('clefShort')[cfg.clef]} · ${levelName(cfg.level, cfg.clef)} · ${t('seedShort')} #${seed}</div>
     ${wrongList ? `<div class="wrong">${t('wrongNotes')}${wrongList}</div>` : ''}
     <div class="actions"><button class="btn primary" id="againNew" type="button">${t('againNew')}</button><button class="btn" id="againSame" type="button">${t('againSame')}</button><button class="btn" id="backBtn" type="button">${t('back')}</button></div>`;
   $('result').hidden = false;
