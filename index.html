@@ -82,13 +82,14 @@ button { font: inherit; cursor: pointer; touch-action: manipulation; -webkit-use
 .field > .label span { color: var(--muted); font-weight: 400; font-size: .85rem; margin-left: 8px; }
 .levels { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 8px; }
 .levels label { border: 1px solid var(--border); background: var(--card); border-radius: 10px; padding: 10px 12px; cursor: pointer; display: grid; gap: 2px; }
-.levels label:has(input:checked) { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+/* .on mirrors :has(input:checked) for older Android browsers without :has() support */
+.levels label:has(input:checked), .levels label.on { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
 .levels input { position: absolute; opacity: 0; width: 0; height: 0; }
 .levels b { font-size: .95rem; }
 .levels small { color: var(--muted); }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .chips label { border: 1px solid var(--border); background: var(--card); border-radius: 999px; padding: 6px 14px; cursor: pointer; }
-.chips label:has(input:checked) { border-color: var(--accent); background: var(--sel); color: #1c1a17; }
+.chips label:has(input:checked), .chips label.on { border-color: var(--accent); background: var(--sel); color: #1c1a17; }
 .chips input { position: absolute; opacity: 0; width: 0; height: 0; }
 .chips.clefs label { display: inline-flex; align-items: center; gap: 6px; }
 .chips i { display: inline-block; height: 1.5em; width: .75em; vertical-align: middle; }
@@ -142,7 +143,7 @@ input[type=number] { width: 7.5em; }
   box-shadow: 0 1px 0 var(--border); }
 .key.acc { font-size: 1.5rem; }
 .key.acc.on { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
-.key:active { transform: translateY(1px); box-shadow: none; }
+.key:active, .key.pressed { transform: translateY(1px); box-shadow: none; background: var(--sel); color: #1c1a17; border-color: var(--accent); }
 .ctl { display: flex; gap: 8px; align-items: center; }
 .ctl .status { flex: 1; color: var(--muted); font-size: .9rem; min-width: 0; }
 .ctl .btn { padding: 8px 14px; }
@@ -535,7 +536,14 @@ function syncClef() {
   if (!mixed) fillCustomSel(clef);
   $('customRange').hidden = mixed || curLevel() !== 'custom';
   applyLang();
+  markChecked();
 }
+// Highlight the checked option with a class as well, for browsers without :has().
+function markChecked() {
+  document.querySelectorAll('.levels label, .chips label').forEach(l => { const i = l.querySelector('input'); l.classList.toggle('on', !!(i && i.checked)); });
+}
+// Brief visual feedback on a tapped key, so a tablet shows the press even where :active is too short to notice.
+function flash(b) { b.classList.add('pressed'); setTimeout(() => b.classList.remove('pressed'), 160); }
 function clefIcon(clef) {
   // Same coordinates as the worksheet: baseline on the bottom line, 250 font units per space.
   const lines = [0, 1, 2, 3, 4].map(k => `<line x1="0" x2="800" y1="${1400 - k * 250}" y2="${1400 - k * 250}"/>`).join('');
@@ -551,6 +559,7 @@ function buildSetup() {
   document.querySelectorAll('[data-clef-ico]').forEach(el => { el.innerHTML = clefIcon(el.dataset.clefIco); });
   document.querySelectorAll('input[name=level]').forEach(r => r.addEventListener('change', () => { $('customRange').hidden = r.value !== 'custom'; }));
   document.querySelectorAll('input[name=clef]').forEach(r => r.addEventListener('change', syncClef));
+  $('setup').addEventListener('change', markChecked);
   $('seed').value = newSeed();
   $('randSeed').addEventListener('click', () => { $('seed').value = newSeed(); });
   $('startBtn').addEventListener('click', () => start(+$('seed').value || newSeed()));
@@ -650,7 +659,7 @@ function buildKeys() {
   if (cfg.acc) html += `<button class="key acc" type="button" data-acc="-1">♭</button><button class="key acc" type="button" data-acc="1">♯</button>`;
   html += LETTERS.map(l => `<button class="key" type="button" data-l="${l}">${l}</button>`).join('');
   k.innerHTML = html;
-  k.querySelectorAll('[data-l]').forEach(b => b.addEventListener('click', () => answer(b.dataset.l)));
+  k.querySelectorAll('[data-l]').forEach(b => b.addEventListener('click', () => { flash(b); answer(b.dataset.l); }));
   k.querySelectorAll('[data-acc]').forEach(b => b.addEventListener('click', () => setPending(+b.dataset.acc)));
 }
 function setPending(a) { pending = pending === a ? 0 : a; $('keys').querySelectorAll('[data-acc]').forEach(b => b.classList.toggle('on', +b.dataset.acc === pending)); }
