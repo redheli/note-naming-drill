@@ -13,6 +13,7 @@ Timed note-naming practice in treble clef, bass clef or both, for young flute an
 - Optional sharps and flats (answers like F♯, B♭).
 - Every page has a number. The same number always produces the same 30 notes, so a page can be redone or assigned.
 - Instant grading with the correct name shown under each miss, a per-page score, and a list of missed notes.
+- Tap any graded note for a worked explanation: a big staff showing its "6 1 3" landmark group (A, C, E) in blue, the note in red, and the steps in words (which line or space, nearest landmark, count one up or down, accidental).
 - Practice log and a "show missed notes more often" option, stored in the browser.
 - Chinese / English toggle in the top-right corner.
 

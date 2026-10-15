@@ -156,7 +156,24 @@ input[type=number] { width: 7.5em; }
 .result .score .bad { color: var(--bad); }
 .result .meta { color: var(--muted); font-size: .9rem; }
 .result .wrong { font-size: .95rem; }
-.result .wrong span { display: inline-block; border: 1px solid var(--border); border-radius: 6px; padding: 2px 8px; margin: 2px 4px 2px 0; font-family: var(--font-note); font-weight: 600; }
+.result .wrong button { display: inline-block; border: 1px solid var(--border); background: var(--card); color: var(--fg); border-radius: 6px; padding: 2px 8px; margin: 2px 4px 2px 0; font-family: var(--font-note); font-weight: 600; }
+.result .wrong button:hover { border-color: var(--accent); }
+.sheet .boxes.graded .box { cursor: pointer; }
+
+/* explanation dialog: how to work out one note */
+.modal { position: fixed; inset: 0; z-index: 20; background: rgba(0,0,0,.45); display: grid; place-items: center; padding: 16px; }
+.modal .card { background: var(--paper); color: var(--ink); border-radius: 14px; padding: 14px 18px 16px; width: 100%; max-width: 520px; max-height: 100%; overflow: auto;
+  display: grid; gap: 10px; box-shadow: 0 12px 40px rgba(0,0,0,.3); }
+.ex-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.ex-head b { font-family: var(--font-note); font-size: 1.15rem; }
+.ex-head .yours { color: #6e675c; font-size: .9rem; font-weight: 400; margin-left: 8px; }
+.ex-svg svg { width: 100%; height: auto; display: block; max-height: 48vh; }
+.ex-steps { margin: 0; padding-left: 1.4em; font-size: 1.05rem; line-height: 1.6; display: grid; gap: 4px; }
+.ex-steps b { font-family: var(--font-note); }
+.ex-steps .lm { color: #2f6b8c; }
+.ex-steps .tg { color: #b93a2d; }
+.ex-nav { display: flex; justify-content: space-between; gap: 8px; }
+.modal .btn { background: #fff; color: #1c1a17; border-color: #d9d1c2; }
 .result .actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .keypad .inner, .keys, .ctl { min-width: 0; }
 .key { min-width: 0; padding: 0; }
@@ -261,6 +278,15 @@ input[type=number] { width: 7.5em; }
   </div>
 </nav>
 
+<div class="modal" id="explain" hidden>
+  <div class="card" role="dialog" aria-modal="true" aria-labelledby="exTitle">
+    <div class="ex-head"><b id="exTitle"></b><button class="btn" id="exClose" type="button" data-i18n="exClose">关闭</button></div>
+    <div class="ex-svg" id="exSvg"></div>
+    <ol class="ex-steps" id="exSteps"></ol>
+    <div class="ex-nav" id="exNav"><button class="btn" id="exPrev" type="button" data-i18n="exPrev">← 上一个错题</button><button class="btn" id="exNext" type="button" data-i18n="exNext">下一个错题 →</button></div>
+  </div>
+</div>
+
 <script>
 const GLYPH={
   clef:"M314 801Q300 854 291.0 906.0Q282 958 282 1012Q282 1059 288.5 1100.5Q295 1142 307 1177Q320 1217 341.0 1252.5Q362 1288 385.5 1311.0Q409 1334 427 1334Q451 1334 493 1249Q514 1206 524.0 1156.0Q534 1106 534 1049Q534 978 515.0 907.5Q496 837 459.5 775.0Q423 713 372 666L407 498Q422 500 432.0 501.0Q442 502 447 502Q508 502 556.0 467.5Q604 433 632.5 377.0Q661 321 661 254Q661 177 621.5 115.5Q582 54 503 25Q508 8 532 -117Q538 -147 541.0 -164.5Q544 -182 545.0 -195.0Q546 -208 546 -225Q546 -275 521.5 -314.5Q497 -354 455.5 -376.0Q414 -398 363 -398Q311 -398 271.0 -378.5Q231 -359 208.0 -324.5Q185 -290 185 -245Q185 -197 211.5 -165.0Q238 -133 287 -133Q329 -133 355.5 -163.5Q382 -194 382 -236Q382 -272 357.0 -299.0Q332 -326 292 -326H282Q308 -365 364 -365Q433 -365 472.0 -320.0Q511 -275 511 -205Q511 -188 507.0 -159.5Q503 -131 493 -91Q483 -51 477.5 -25.0Q472 1 470 12Q436 2 390 2Q304 2 222 52Q142 102 96.0 184.0Q50 266 50 361Q50 451 91 530Q132 609 192.5 675.0Q253 741 314 801ZM341 826Q364 838 390.0 870.5Q416 903 440.0 945.0Q464 987 479.0 1029.5Q494 1072 494 1106Q494 1142 483.0 1163.0Q472 1184 445 1184Q421 1184 398.5 1162.0Q376 1140 358.5 1103.5Q341 1067 331.0 1022.0Q321 977 321 930Q321 898 327.5 872.0Q334 846 341 826ZM398 379Q371 373 347.0 353.5Q323 334 308.5 306.5Q294 279 294 248Q294 223 307.0 196.5Q320 170 339 154Q352 142 365 136Q380 129 380 123Q380 120 370 117Q332 126 301.5 151.0Q271 176 253.5 211.5Q236 247 236 287Q236 330 253.5 370.0Q271 410 302.5 442.0Q334 474 374 490L345 641Q229 547 174.5 456.5Q120 366 120 277Q120 212 154.0 156.0Q188 100 247.0 65.5Q306 31 380 31Q400 31 420.5 35.0Q441 39 464 45ZM495 55Q593 97 593 227Q593 270 571.0 305.5Q549 341 512.0 362.0Q475 383 429 383Z",
@@ -304,6 +330,14 @@ const I18N = {
     timeUpHint:'时间到了,做完后点交卷', overTime:'超时', vPerfect:'全对!', vGreat:'很棒,快全对了。', vGood:'不错,再练练错的音。', vKeep:'多练几次就会熟。',
     againNew:'再来一页(新题)', againSame:'重做这一页', back:'返回设置',
     fitOn:'整页', fitOff:'原大', fitTip:'切换:整页显示 / 原始大小(可滚动)',
+    exHint:'点一下任何一题的横线,看这个音是怎么数出来的。',
+    exClose:'关闭', exPrev:'← 上一个错题', exNext:'下一个错题 →', exTitle:'第{n}题 · 答案是 {a}', exYours:'你写的是 {a}', exBlank:'没有作答',
+    exPos:'这个音在{p}。',
+    exIsLm:'它本身就是记号音 {L}({n}),属于{g}。',
+    exNear:'最近的记号音是 {L}({n}),在它{side}一格。{n} 往{dir}数一个是 {m},所以这个音是 {t}。',
+    exAcc:'前面有 {s}({name}),所以写成 {t}。',
+    sharpName:'升号', flatName:'降号', above:'上面', below:'下面', up:'上', down:'下',
+    groups: { mid:'中央C 组(6 1 3 围着中央 C)', trebleTop:'高音谱表上面的 6 1 3(像气球飘在上面)', trebleLedger:'上加线上的 6 1 3', bassBottom:'低音谱表下面的 6 1 3(像石头沉在下面)', bassLedger:'下加线上的 6 1 3', other:'{c} 旁边的 6 1 3 组' },
     levels: {
       treble: {
         l1:['第1级 · 线与间','E4–F5,五条线、四个间'],
@@ -348,6 +382,14 @@ const I18N = {
     timeUpHint:'Time is up, finish and press Submit', overTime:'over time', vPerfect:'Perfect!', vGreat:'Great, almost perfect.', vGood:'Nice. Practise the missed notes.', vKeep:'Keep going, it gets easier.',
     againNew:'New page', againSame:'Redo this page', back:'Back to settings',
     fitOn:'Fit', fitOff:'Full', fitTip:'Toggle: fit whole page on screen / full size with scrolling',
+    exHint:'Tap any answer line to see how to work that note out.',
+    exClose:'Close', exPrev:'← Previous miss', exNext:'Next miss →', exTitle:'Question {n} · answer {a}', exYours:'You wrote {a}', exBlank:'Left blank',
+    exPos:'This note is {p}.',
+    exIsLm:'It is a landmark note itself: {L} ({n}), part of {g}.',
+    exNear:'The nearest landmark is {L} ({n}), one step {side} it. {n} {dir} one is {m}, so this note is {t}.',
+    exAcc:'It has a {s} ({name}) in front, so the answer is {t}.',
+    sharpName:'sharp', flatName:'flat', above:'above', below:'below', up:'up', down:'down',
+    groups: { mid:'the middle-C group (6 1 3 around middle C)', trebleTop:'the 6 1 3 at the top of the treble staff (like balloons)', trebleLedger:'the 6 1 3 on the ledger lines above', bassBottom:'the 6 1 3 at the bottom of the bass staff (like stones)', bassLedger:'the 6 1 3 on the ledger lines below', other:'the 6 1 3 group next to {c}' },
     levels: {
       treble: {
         l1:['Level 1 · Lines & spaces','E4–F5, the five lines and four spaces'],
@@ -465,20 +507,115 @@ function staveSVG(notes, clef, last) {
   // The bass-clef outline has its F line at y=650 in font units (the two dots straddle it), so shift it up by 4 to sit on the fourth line.
   if (clef === 'bass') s += `<path d="${GLYPH.fclef}" fill="var(--ink)" transform="translate(12 ${bottom - 4}) scale(${SCALE} ${-SCALE})"/>`;
   else s += `<path d="${GLYPH.clef}" fill="var(--ink)" transform="translate(12 ${bottom}) scale(${SCALE} ${-SCALE})"/>`;
-  notes.forEach((n, i) => {
-    const cx = X0 + CW * i + CW / 2;
-    const pos = n.step - base;
-    const cy = bottom - pos * 5;
-    s += `<g stroke="var(--ink)" stroke-width="1.2">`;
-    for (let p = -2; p >= pos; p -= 2) s += `<line x1="${cx - 13}" y1="${bottom - p * 5}" x2="${cx + 13}" y2="${bottom - p * 5}"/>`;
-    for (let p = 10; p <= pos; p += 2) s += `<line x1="${cx - 13}" y1="${bottom - p * 5}" x2="${cx + 13}" y2="${bottom - p * 5}"/>`;
-    s += `</g>`;
-    if (n.acc === 1) s += `<path d="${GLYPH.sharp}" fill="var(--ink)" transform="translate(${cx - 31} ${cy + 7.1}) scale(${SCALE} ${-SCALE})"/>`;
-    if (n.acc === -1) s += `<path d="${GLYPH.flat}" fill="var(--ink)" transform="translate(${cx - 24} ${cy + 5}) scale(${SCALE} ${-SCALE})"/>`;
-    s += `<path d="${GLYPH.whole}" fill="var(--ink)" transform="translate(${cx - 10.3} ${cy + 5.36}) scale(${SCALE} ${-SCALE})"/>`;
-  });
+  notes.forEach((n, i) => { s += noteGlyphs(X0 + CW * i + CW / 2, n.step - base, bottom, n.acc, 'var(--ink)'); });
   return s + `</svg>`;
 }
+// One whole note at staff position `pos` (0 = bottom line, 1 = first space, ...) with its ledger lines and accidental.
+function noteGlyphs(cx, pos, bottom, acc, ink) {
+  const cy = bottom - pos * 5;
+  let s = `<g stroke="${ink}" stroke-width="1.2">`;
+  for (let p = -2; p >= pos; p -= 2) s += `<line x1="${cx - 13}" y1="${bottom - p * 5}" x2="${cx + 13}" y2="${bottom - p * 5}"/>`;
+  for (let p = 10; p <= pos; p += 2) s += `<line x1="${cx - 13}" y1="${bottom - p * 5}" x2="${cx + 13}" y2="${bottom - p * 5}"/>`;
+  s += `</g>`;
+  if (acc === 1) s += `<path d="${GLYPH.sharp}" fill="${ink}" transform="translate(${cx - 31} ${cy + 7.1}) scale(${SCALE} ${-SCALE})"/>`;
+  if (acc === -1) s += `<path d="${GLYPH.flat}" fill="${ink}" transform="translate(${cx - 24} ${cy + 5}) scale(${SCALE} ${-SCALE})"/>`;
+  s += `<path d="${GLYPH.whole}" fill="${ink}" transform="translate(${cx - 10.3} ${cy + 5.36}) scale(${SCALE} ${-SCALE})"/>`;
+  return s;
+}
+
+// ---------- explanation: landmark notes ----------
+// The "6 1 3" method: A, C and E (numbers 6, 1, 3) form stacked landmark groups on the staff.
+// Every other note is one step away from a landmark, so the answer is "landmark, then count one up or down".
+const NUM = { C:1, D:2, E:3, F:4, G:5, A:6, B:7 };
+const LM_INK = '#2f6b8c', TG_INK = '#b93a2d';
+const CN = ['', '一', '二', '三', '四', '五', '六'], ORD = ['', '1st', '2nd', '3rd', '4th', '5th', '6th'];
+function letterOf(step) { return LETTERS[((step % 7) + 7) % 7]; }
+function landmarkOf(step) {
+  const l = letterOf(step);
+  if ('ACE'.includes(l)) return step;
+  return (l === 'B' || l === 'G') ? step + 1 : step - 1; // B and G count down from C / A above; D and F count up from C / E below
+}
+// The landmark group (A, C, E) that the note belongs to or sits next to, as the step of its C.
+function groupC(step) {
+  const l = letterOf(step);
+  return step + { C:0, D:-1, E:-2, F:-3, G:3, A:2, B:1 }[l];
+}
+function groupName(c, clef) {
+  const g = t('groups');
+  if (c === 0) return g.mid;
+  if (clef === 'treble' && c === 7) return g.trebleTop;
+  if (clef === 'treble' && c === 14) return g.trebleLedger;
+  if (clef === 'bass' && c === -7) return g.bassBottom;
+  if (clef === 'bass' && c === -14) return g.bassLedger;
+  return g.other.replace('{c}', noteName(c));
+}
+function posText(pos) {
+  const inStaff = pos >= 0 && pos <= 8, up = pos > 8, n = inStaff ? pos : up ? pos - 8 : -pos;
+  if (lang === 'zh') {
+    if (inStaff) return pos % 2 === 0 ? `第${CN[pos / 2 + 1]}线上` : `第${CN[(pos + 1) / 2]}间`;
+    return (up ? '上加' : '下加') + (n % 2 === 0 ? `${CN[n / 2]}线上` : `${CN[(n + 1) / 2]}间`);
+  }
+  if (inStaff) return pos % 2 === 0 ? `on the ${ORD[pos / 2 + 1]} line` : `in the ${ORD[(pos + 1) / 2]} space`;
+  if (n === 1) return up ? 'just above the top line' : 'just below the bottom line';
+  if (n % 2 === 0) return `on the ${ORD[n / 2]} ledger line ${up ? 'above' : 'below'}`;
+  return `${up ? 'above' : 'below'} the ${ORD[(n - 1) / 2]} ledger line`;
+}
+function fill(s, m) { return s.replace(/\{(\w+)\}/g, (_, k) => m[k]); }
+function explainSteps(step, acc, clef) {
+  const pos = step - CLEF_BASE[clef], L = letterOf(step), lm = landmarkOf(step), lmL = letterOf(lm), c = groupC(step);
+  const out = [fill(t('exPos'), { p: posText(pos) })];
+  if (lm === step) out.push(fill(t('exIsLm'), { L: `<b class="lm">${L}</b>`, n: NUM[L], g: groupName(c, clef) }));
+  else {
+    const above = lm > step;
+    out.push(fill(t('exNear'), { L: `<b class="lm">${lmL}</b>`, n: NUM[lmL], side: t(above ? 'above' : 'below'), dir: t(above ? 'down' : 'up'), m: NUM[L], t: `<b class="tg">${L}</b>` }));
+  }
+  if (acc) out.push(fill(t('exAcc'), { s: accSym(acc), name: t(acc === 1 ? 'sharpName' : 'flatName'), t: `<b class="tg">${L + accSym(acc)}</b>` }));
+  return out;
+}
+// A big single staff: the landmark group stacked in blue on the left, the note in red on the right,
+// with a dashed guide at the landmark's height.
+function explainSVG(step, acc, clef) {
+  const base = CLEF_BASE[clef], W = 270, lm = landmarkOf(step), c = groupC(step), group = [c - 2, c, c + 2];
+  const poss = [step, ...group].map(s => s - base);
+  const maxPos = Math.max(8, Math.max(...poss) + 1), minPos = Math.min(0, Math.min(...poss) - 1);
+  const bottom = Math.max(9 + maxPos * 5, 56), H = bottom + Math.max((-minPos) * 5 + 8, 18);
+  let s = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">`;
+  s += `<g stroke="var(--ink)" stroke-width="1.1">`;
+  for (let k = 0; k < 5; k++) { const y = bottom - k * SP; s += `<line x1="6" y1="${y}" x2="${W - 6}" y2="${y}"/>`; }
+  s += `</g>`;
+  if (clef === 'bass') s += `<path d="${GLYPH.fclef}" fill="var(--ink)" transform="translate(12 ${bottom - 4}) scale(${SCALE} ${-SCALE})"/>`;
+  else s += `<path d="${GLYPH.clef}" fill="var(--ink)" transform="translate(12 ${bottom}) scale(${SCALE} ${-SCALE})"/>`;
+  const gx = 105, tx = 205;
+  const ly = bottom - (lm - base) * 5;
+  s += `<line x1="${gx + 16}" y1="${ly}" x2="${tx - 16}" y2="${ly}" stroke="${LM_INK}" stroke-width="1" stroke-dasharray="3 3"/>`;
+  group.forEach(g => {
+    const p = g - base, l = letterOf(g);
+    s += noteGlyphs(gx, p, bottom, 0, LM_INK);
+    s += `<text x="${gx - 20}" y="${bottom - p * 5 + 3.2}" font-size="8.5" font-weight="700" text-anchor="end" fill="${LM_INK}" font-family="Georgia, serif">${NUM[l]} ${l}</text>`;
+  });
+  const tp = step - base;
+  s += noteGlyphs(tx, tp, bottom, acc, TG_INK);
+  s += `<text x="${tx + 20}" y="${bottom - tp * 5 + 3.5}" font-size="11" font-weight="700" fill="${TG_INK}" font-family="Georgia, serif">${letterOf(step) + accSym(acc)}</text>`;
+  return s + `</svg>`;
+}
+let exCur = -1;
+function wrongIdx() { return notes.map((n, i) => i).filter(i => !isRight(i)); }
+function isRight(i) { const n = notes[i], a = answers[i]; return !!(a && a.l === letterOf(n.step) && (a.a || 0) === n.acc); }
+function openExplain(i) {
+  exCur = i;
+  const n = notes[i], clef = rowClefs[Math.floor(i / COLS)], a = answers[i], ans = letterOf(n.step) + accSym(n.acc);
+  const yours = isRight(i) ? '' : `<span class="yours">${a ? fill(t('exYours'), { a: ansStr(a) }) : t('exBlank')}</span>`;
+  $('exTitle').innerHTML = fill(t('exTitle'), { n: i + 1, a: ans }) + yours;
+  $('exSvg').innerHTML = explainSVG(n.step, n.acc, clef);
+  $('exSteps').innerHTML = explainSteps(n.step, n.acc, clef).map(x => `<li>${x}</li>`).join('');
+  const w = wrongIdx(), k = w.indexOf(i);
+  $('exNav').hidden = w.length < 2 || k < 0;
+  $('exPrev').disabled = k <= 0; $('exNext').disabled = k < 0 || k >= w.length - 1;
+  $('explain').hidden = false;
+  $('exClose').focus();
+}
+function closeExplain() { $('explain').hidden = true; }
+function exStep(d) { const w = wrongIdx(), k = w.indexOf(exCur); if (k < 0) return; const j = k + d; if (j >= 0 && j < w.length) openExplain(w[j]); }
 
 // ---------- state ----------
 const $ = id => document.getElementById(id);
@@ -646,7 +783,10 @@ function buildSheet() {
   html += `</div>`;
   $('sheet').innerHTML = html;
   boxes = Array.from($('sheet').querySelectorAll('.box'));
-  boxes.forEach(b => b.addEventListener('click', () => { if (graded) return; cur = +b.dataset.i; updateBoxes(); }));
+  boxes.forEach(b => b.addEventListener('click', () => {
+    if (graded) { if (lastResult) openExplain(+b.dataset.i); return; }
+    cur = +b.dataset.i; updateBoxes();
+  }));
 }
 function refreshTestText() {
   const sh = $('sheetHead'); if (sh) sh.innerHTML = sheetHeadHTML();
@@ -730,17 +870,20 @@ function grade() {
 }
 function renderResult() {
   const { score, secs, wrong, timeout } = lastResult;
-  const wrongList = Object.entries(wrong).sort((a, b) => b[1] - a[1]).map(([k, v]) => `<span>${k}${v > 1 ? ' ×' + v : ''}</span>`).join('');
+  const firstIdx = k => notes.findIndex((n, i) => !isRight(i) && letterOf(n.step) + accSym(n.acc) + noteName(n.step).slice(-1) === k);
+  const wrongList = Object.entries(wrong).sort((a, b) => b[1] - a[1]).map(([k, v]) => `<button type="button" data-i="${firstIdx(k)}">${k}${v > 1 ? ' ×' + v : ''}</button>`).join('');
   const pct = score / TOTAL;
   const verdict = pct === 1 ? t('vPerfect') : pct >= 0.9 ? t('vGreat') : pct >= 0.7 ? t('vGood') : t('vKeep');
   $('result').innerHTML = `<div class="score"><b class="${pct >= 0.9 ? 'good' : pct < 0.7 ? 'bad' : ''}">${score} / ${TOTAL}</b><span>${verdict}</span></div>
     <div class="meta">${t('timeUsed')} ${fmt(secs)}${cfg.time ? ' (' + t('limit') + ' ' + fmt(cfg.time) + (timeout ? ', ' + t('overTime') : '') + ')' : ''} · ${t('clefShort')[cfg.clef]} · ${levelName(cfg.level, cfg.clef)} · ${t('seedShort')} #${seed}</div>
     ${wrongList ? `<div class="wrong">${t('wrongNotes')}${wrongList}</div>` : ''}
+    <div class="hint">${t('exHint')}</div>
     <div class="actions"><button class="btn primary" id="againNew" type="button">${t('againNew')}</button><button class="btn" id="againSame" type="button">${t('againSame')}</button><button class="btn" id="backBtn" type="button">${t('back')}</button></div>`;
   $('result').hidden = false;
   $('againNew').addEventListener('click', () => start(newSeed()));
   $('againSame').addEventListener('click', () => start(seed));
   $('backBtn').addEventListener('click', backToSetup);
+  $('result').querySelectorAll('.wrong button').forEach(b => b.addEventListener('click', () => { if (+b.dataset.i >= 0) openExplain(+b.dataset.i); }));
 }
 function backToSetup() {
   clearInterval(timerId); graded = true;
@@ -752,9 +895,17 @@ $('prevBtn').addEventListener('click', () => move(-1));
 $('nextBtn').addEventListener('click', () => move(1));
 $('clearBtn').addEventListener('click', clearCur);
 $('submitBtn').addEventListener('click', () => grade());
+$('exClose').addEventListener('click', closeExplain);
+$('explain').addEventListener('click', e => { if (e.target === $('explain')) closeExplain(); });
+$('exPrev').addEventListener('click', () => exStep(-1));
+$('exNext').addEventListener('click', () => exStep(1));
 document.addEventListener('keydown', e => {
-  if ($('test').hidden || graded || e.ctrlKey || e.metaKey || e.altKey) return;
   const k = e.key;
+  if (!$('explain').hidden) {
+    if (k === 'Escape') closeExplain(); else if (k === 'ArrowLeft') exStep(-1); else if (k === 'ArrowRight') exStep(1); else return;
+    e.preventDefault(); return;
+  }
+  if ($('test').hidden || graded || e.ctrlKey || e.metaKey || e.altKey) return;
   if (/^[a-gA-G]$/.test(k)) { answer(k.toUpperCase()); e.preventDefault(); }
   else if (k === '#' || k === '+' || k === '=') { if (cfg.acc) setPending(1); e.preventDefault(); }
   else if (k === '-' || k === '_') { if (cfg.acc) setPending(-1); e.preventDefault(); }
