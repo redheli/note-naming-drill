@@ -50,10 +50,13 @@
   --key: #23272d; --key-fg: #ebe6dc; --card: #1f2227; color-scheme: dark;
 }
 * { box-sizing: border-box; }
+/* --keypad-h is measured from the fixed keypad by JS, so the page can always scroll past it and
+   scrollIntoView() keeps the current box above it (and below the sticky header). */
+html { scroll-padding-top: 72px; scroll-padding-bottom: calc(var(--keypad-h, 0px) + 12px); }
 [hidden] { display: none !important; }
 body {
   background: var(--bg); color: var(--fg); font-family: var(--font-ui); font-size: 16px; line-height: 1.45;
-  margin: 0; padding-block: 0 140px;
+  margin: 0; padding-block: 0 calc(var(--keypad-h, 0px) + 24px);
   padding-left: max(16px, env(safe-area-inset-left, 0px));
   padding-right: max(16px, env(safe-area-inset-right, 0px));
 }
@@ -731,7 +734,7 @@ function start(s) {
   ({ notes, rowClefs } = makePage(cfg, seed));
   answers = new Array(TOTAL).fill(null); cur = 0; pending = 0; graded = false; lastResult = null; overTime = false;
   $('setup').hidden = true; $('test').hidden = false; $('result').hidden = true; $('keypad').hidden = false;
-  buildSheet(); buildKeys();
+  buildSheet(); buildKeys(); syncKeypadH();
   $('timer').hidden = false; $('fitBtn').hidden = false; updateFitBtn();
   t0 = Date.now(); clearInterval(timerId); timerId = setInterval(tick, 250); tick();
   window.scrollTo({ top: 0 });
@@ -762,6 +765,11 @@ function fitSheet() {
 }
 let rzTimer = null;
 window.addEventListener('resize', () => { clearTimeout(rzTimer); rzTimer = setTimeout(fitSheet, 120); });
+// Keep --keypad-h equal to the keypad's real height (0 while hidden) instead of a hard-coded guess:
+// on Android the safe-area inset and font scaling make it taller, which used to cover the last row.
+function syncKeypadH() { document.documentElement.style.setProperty('--keypad-h', $('keypad').offsetHeight + 'px'); }
+if ('ResizeObserver' in window) new ResizeObserver(syncKeypadH).observe($('keypad'));
+else window.addEventListener('resize', syncKeypadH);
 function rangeText() {
   return cfg.clefs.map(c => (cfg.clefs.length > 1 ? t('clefShort')[c] + ' ' : '') + noteName(cfg.ranges[c][0]) + '–' + noteName(cfg.ranges[c][1])).join(' · ');
 }
@@ -862,7 +870,7 @@ function grade() {
   const h = load('staff.history', []); h.unshift(entry); store('staff.history', h.slice(0, 100));
   lastResult = { score, secs, wrong, timeout: !!timeout };
   renderResult();
-  $('keypad').hidden = true; $('timer').hidden = true; $('fitBtn').hidden = true;
+  $('keypad').hidden = true; $('timer').hidden = true; $('fitBtn').hidden = true; syncKeypadH();
   fitSheet();
   $('result').scrollIntoView({ block: 'start' });
 }
@@ -885,7 +893,7 @@ function renderResult() {
 }
 function backToSetup() {
   clearInterval(timerId); graded = true;
-  $('test').hidden = true; $('keypad').hidden = true; $('timer').hidden = true; $('fitBtn').hidden = true; $('setup').hidden = false;
+  $('test').hidden = true; $('keypad').hidden = true; $('timer').hidden = true; $('fitBtn').hidden = true; $('setup').hidden = false; syncKeypadH();
   renderHistory(); window.scrollTo({ top: 0 });
 }
 
