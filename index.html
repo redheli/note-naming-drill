@@ -105,7 +105,15 @@ input[type=number] { width: 7.5em; }
 .start-row .btn.primary { font-size: 1.1rem; padding: 12px 28px; }
 .history { border-top: 1px solid var(--border); padding-top: 14px; }
 .history h2 { font-size: 1rem; margin: 0 0 8px; display: flex; justify-content: space-between; align-items: center; }
+.history h2 .hist-tools { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-weight: 400; font-size: .85rem; }
 .history h2 button { font-size: .8rem; }
+.history input[type=text] { font: inherit; padding: 5px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--card); color: var(--fg); width: 10em; }
+.history .sync { color: var(--muted); font-size: .8rem; margin: -2px 0 8px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.history .sync button { font-size: .75rem; padding: 3px 10px; }
+.history .sync.warn { color: var(--warn); }
+.history .more { margin-top: 8px; }
+.history .best { margin-top: 10px; }
+.history .best th { padding-top: 0; }
 .history table { width: 100%; border-collapse: collapse; font-size: .9rem; font-variant-numeric: tabular-nums; }
 .history th, .history td { text-align: left; padding: 5px 6px; border-bottom: 1px solid var(--border); white-space: nowrap; }
 .history th { color: var(--muted); font-weight: 500; font-size: .8rem; }
@@ -257,7 +265,9 @@ input[type=number] { width: 7.5em; }
       <span class="hint" data-i18n="keysHint">用键盘按 A–G 作答,# 是升号,- 是降号;平板上点下方按键</span>
     </div>
     <div class="history">
-      <h2><span data-i18n="history">练习记录</span> <button class="btn" id="clearHist" type="button" data-i18n="clearHistory">清空记录</button></h2>
+      <h2><span data-i18n="history">练习记录</span>
+        <span class="hist-tools"><label><span data-i18n="who">名字</span> <input type="text" id="who" maxlength="24" autocomplete="off" autocapitalize="words"></label><button class="btn" id="clearHist" type="button" data-i18n="clearHistory">清空记录</button></span></h2>
+      <div class="sync" id="syncLine" hidden></div>
       <div id="histBody"></div>
     </div>
   </section>
@@ -327,6 +337,10 @@ const I18N = {
     start:'开始测试', keysHint:'用键盘按 A–G 作答,# 是升号,- 是降号;平板上点下方按键',
     history:'练习记录', clearHistory:'清空记录', noHistory:'还没有记录。做完一页会自动记在这里。',
     hWhen:'时间', hLevel:'难度', hSeed:'题号', hScore:'得分', hTime:'用时', timeoutTag:'到时', oftenMissed:'常错的音:',
+    who:'名字', whoPh:'例如 Carolyn iPad', hWho:'谁', showAll:'显示全部 {n} 条', showLess:'只看最近 {n} 条',
+    resetMiss:'重置错音统计', syncOk:'已同步到 Google 表格 · 共 {n} 条', syncing:'同步中…', syncOffline:'没连上 Google 表格,只显示本机记录',
+    syncPending:'{n} 页等待上传', syncNoName:'先在上面填名字,这台设备做的页才会上传', refresh:'刷新',
+    best:'各难度最好成绩', hPages:'页数', hBest:'最好', hBestTime:'最快满分',
     prev:'← 上一题', clear:'清除', next:'下一题 →', submit:'交卷', answered:'已答',
     sheetTitle:'Name the Notes · 题号', withAcc:'含升降号', questionLabel:'第{n}题',
     timeUsed:'用时', limit:'限时', seedShort:'题号', wrongNotes:'答错的音:',
@@ -379,6 +393,10 @@ const I18N = {
     start:'Start test', keysHint:'Type A–G to answer, # for sharp, - for flat; on a tablet tap the keys below',
     history:'Practice log', clearHistory:'Clear log', noHistory:'No records yet. Finished pages are saved here automatically.',
     hWhen:'When', hLevel:'Level', hSeed:'Page', hScore:'Score', hTime:'Time', timeoutTag:'time up', oftenMissed:'Often missed: ',
+    who:'Name', whoPh:'e.g. Carolyn iPad', hWho:'Who', showAll:'Show all {n}', showLess:'Show last {n}',
+    resetMiss:'Reset missed notes', syncOk:'Synced with Google Sheet · {n} records', syncing:'Syncing…', syncOffline:'Could not reach the Google Sheet; showing this device only',
+    syncPending:'{n} pages waiting to upload', syncNoName:'Enter a name above so pages from this device are uploaded', refresh:'Refresh',
+    best:'Best by level', hPages:'Pages', hBest:'Best', hBestTime:'Fastest 30/30',
     prev:'← Prev', clear:'Clear', next:'Next →', submit:'Submit', answered:'Answered',
     sheetTitle:'Name the Notes · Page', withAcc:'with ♯♭', questionLabel:'Question {n}',
     timeUsed:'Time', limit:'limit', seedShort:'Page', wrongNotes:'Missed notes: ',
@@ -701,29 +719,117 @@ function buildSetup() {
   $('seed').value = newSeed();
   $('randSeed').addEventListener('click', () => { $('seed').value = newSeed(); });
   $('startBtn').addEventListener('click', () => start(+$('seed').value || newSeed()));
-  $('clearHist').addEventListener('click', () => { store('staff.history', []); store('staff.miss', {}); renderHistory(); });
+  $('clearHist').addEventListener('click', () => {
+    if (!SYNC_URL) store('staff.history', []);
+    store('staff.miss', {}); renderHistory();
+  });
+  $('who').value = who; $('who').placeholder = t('whoPh');
+  $('who').addEventListener('change', () => { who = $('who').value.trim(); store('staff.who', who); syncNow(); });
+  window.addEventListener('online', syncNow);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && Date.now() - lastSync > 60000) syncNow(); });
   $('langBtn').addEventListener('click', () => setLang(lang === 'zh' ? 'en' : 'zh'));
   $('fitBtn').addEventListener('click', () => { fitPref = !fitPref; store('staff.fit', fitPref); updateFitBtn(); fitSheet(); window.scrollTo({ top: 0 }); });
   applyCfg(load('staff.cfg', null));
   syncClef();
+  migrateHistory();
   renderHistory();
+  syncNow();
+}
+
+// ---------- practice log sync (Google Apps Script web app, see sync/Code.gs) ----------
+// Leave SYNC_URL empty to keep the log on this device only.
+const SYNC_URL = 'https://script.google.com/macros/s/AKfycbxr34HPfqT8nEsADSubj0DFQvLmEb8g06i4ghh29JFY2hMTcQq5U8cii-qkbgKVtoKM/exec';
+const RECENT = 20;
+let who = load('staff.who', ''), showAll = false, lastSync = 0, inFlight = false, syncAgain = false;
+let sync = { state: SYNC_URL ? 'syncing' : 'off', n: 0 };
+function newId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+// Older entries have no id; give them a stable one so they can be uploaded and deduplicated.
+function migrateHistory() {
+  const h = load('staff.history', []); let changed = false;
+  h.forEach(e => { if (!e.id) { e.id = 'l' + e.t.toString(36) + '-' + e.seed; changed = true; } });
+  if (changed) store('staff.history', h);
+}
+function setSync(state, n) { sync = { state, n: n || 0 }; renderSyncLine(); }
+function renderSyncLine() {
+  const el = $('syncLine'); el.hidden = !SYNC_URL; if (!SYNC_URL) return;
+  const pend = load('staff.history', []).filter(e => !e.sent).length;
+  let msg = '', warn = false;
+  if (sync.state === 'syncing') msg = t('syncing');
+  else if (sync.state === 'offline') { msg = t('syncOffline'); warn = true; }
+  else msg = t('syncOk').replace('{n}', sync.n);
+  if (sync.state !== 'syncing' && pend) { msg += ' · ' + (who ? t('syncPending').replace('{n}', pend) : t('syncNoName')); warn = true; }
+  el.className = 'sync' + (warn ? ' warn' : '');
+  el.innerHTML = `<span>${msg}</span>` + (sync.state === 'syncing' ? '' : `<button class="btn" type="button" id="syncBtn">${t('refresh')}</button>`);
+  const b = $('syncBtn'); if (b) b.addEventListener('click', syncNow);
+}
+async function syncNow() {
+  if (!SYNC_URL) return;
+  if (inFlight) { syncAgain = true; return; }
+  inFlight = true; lastSync = Date.now();
+  let h = load('staff.history', []);
+  const pend = who ? h.filter(e => !e.sent) : [];
+  if (pend.length) { pend.forEach(e => { if (!e.who) e.who = who; }); store('staff.history', h); }
+  setSync('syncing');
+  try {
+    const res = pend.length
+      ? await fetch(SYNC_URL, { method: 'POST', body: JSON.stringify({ entries: pend }) })
+      : await fetch(SYNC_URL + '?_=' + Date.now());
+    const data = await res.json();
+    if (!data.ok || !Array.isArray(data.entries)) throw new Error(data.error || 'bad response');
+    const remote = new Map(data.entries.map(e => [e.id, { ...e, sent: true }]));
+    const merged = new Map();
+    load('staff.history', []).forEach(e => merged.set(e.id, remote.has(e.id) ? { ...e, ...remote.get(e.id) } : e));
+    remote.forEach((e, id) => { if (!merged.has(id)) merged.set(id, e); });
+    const list = [...merged.values()].sort((a, b) => b.t - a.t);
+    store('staff.history', list.slice(0, 2000));
+    setSync('ok', remote.size);
+  } catch (e) { setSync('offline'); }
+  inFlight = false;
+  renderHistory();
+  if (syncAgain) { syncAgain = false; syncNow(); }
 }
 function histLevel(e) { return e.levelId ? t('clefShort')[e.clef || 'treble'] + ' ' + I18N[lang].levelShort[e.levelId] : (e.level || ''); }
+function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
 function renderHistory() {
   const h = load('staff.history', []);
   const miss = load('staff.miss', {});
   const hasMiss = Object.values(miss).some(v => v > 0);
   $('emphWrap').hidden = !hasMiss;
+  $('clearHist').textContent = SYNC_URL ? t('resetMiss') : t('clearHistory');
+  $('clearHist').hidden = SYNC_URL && !hasMiss;
+  $('who').placeholder = t('whoPh');
+  renderSyncLine();
   if (!h.length) { $('histBody').innerHTML = `<div class="empty">${t('noHistory')}</div>`; return; }
-  const rows = h.slice(0, 20).map(e => {
+  const withWho = SYNC_URL || h.some(e => e.who);
+  const now = new Date();
+  const rows = (showAll ? h : h.slice(0, RECENT)).map(e => {
     const d = new Date(e.t);
-    const when = `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-    return `<tr><td>${when}</td><td>${histLevel(e)}${e.acc ? ' ♯♭' : ''}</td><td>#${e.seed}</td><td><b>${e.score}</b>/${e.total}</td><td>${fmt(e.secs)}${e.timeout ? ' · ' + t('timeoutTag') : ''}</td></tr>`;
+    const day = d.getFullYear() === now.getFullYear() ? `${d.getMonth() + 1}/${d.getDate()}` : `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}`;
+    const when = `${day} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    return `<tr><td>${when}</td>${withWho ? `<td>${esc(e.who || '')}</td>` : ''}<td>${histLevel(e)}${e.acc ? ' ♯♭' : ''}</td><td>#${e.seed}</td><td><b>${e.score}</b>/${e.total}</td><td>${fmt(e.secs)}${e.timeout ? ' · ' + t('timeoutTag') : ''}</td></tr>`;
   }).join('');
+  const more = h.length > RECENT ? `<div class="more"><button class="btn" type="button" id="moreBtn">${(showAll ? t('showLess') : t('showAll')).replace('{n}', showAll ? RECENT : h.length)}</button></div>` : '';
+  // Best result per clef/level: most correct, then fastest; plus the fastest full-score page.
+  const groups = new Map();
+  h.forEach(e => {
+    const k = (e.clef || 'treble') + '|' + (e.levelId || e.level || '') + '|' + (e.acc ? 1 : 0);
+    const g = groups.get(k) || { e, n: 0, best: null, full: null };
+    g.n++;
+    if (!g.best || e.score > g.best.score || e.score === g.best.score && e.secs < g.best.secs) g.best = e;
+    if (e.score === e.total && (!g.full || e.secs < g.full.secs)) g.full = e;
+    groups.set(k, g);
+  });
+  let bestTbl = '';
+  if (h.length > 1 && groups.size) {
+    const ord = { treble: 0, bass: 1, mixed: 2 };
+    const brow = [...groups.values()].sort((a, b) => (ord[a.e.clef] ?? 3) - (ord[b.e.clef] ?? 3) || String(a.e.levelId).localeCompare(String(b.e.levelId)) || (a.e.acc ? 1 : 0) - (b.e.acc ? 1 : 0)).map(g => `<tr><td>${histLevel(g.e)}${g.e.acc ? ' ♯♭' : ''}</td><td>${g.n}</td><td><b>${g.best.score}</b>/${g.best.total}</td><td>${g.full ? fmt(g.full.secs) : '–'}</td></tr>`).join('');
+    bestTbl = `<div class="tbl best"><table><thead><tr><th>${t('best')}</th><th>${t('hPages')}</th><th>${t('hBest')}</th><th>${t('hBestTime')}</th></tr></thead><tbody>${brow}</tbody></table></div>`;
+  }
   let missLine = '';
   const top = Object.entries(miss).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]).slice(0, 8);
   if (top.length) missLine = `<div class="hint" style="margin-top:8px">${t('oftenMissed')}${top.map(([k, v]) => `${k}×${v}`).join(lang === 'zh' ? '、' : ', ')}</div>`;
-  $('histBody').innerHTML = `<div class="tbl"><table><thead><tr><th>${t('hWhen')}</th><th>${t('hLevel')}</th><th>${t('hSeed')}</th><th>${t('hScore')}</th><th>${t('hTime')}</th></tr></thead><tbody>${rows}</tbody></table></div>${missLine}`;
+  $('histBody').innerHTML = `<div class="tbl"><table><thead><tr><th>${t('hWhen')}</th>${withWho ? `<th>${t('hWho')}</th>` : ''}<th>${t('hLevel')}</th><th>${t('hSeed')}</th><th>${t('hScore')}</th><th>${t('hTime')}</th></tr></thead><tbody>${rows}</tbody></table></div>${more}${bestTbl}${missLine}`;
+  const mb = $('moreBtn'); if (mb) mb.addEventListener('click', () => { showAll = !showAll; renderHistory(); });
 }
 
 // ---------- test ----------
@@ -866,8 +972,9 @@ function grade() {
   });
   $('sheet').querySelectorAll('.boxes').forEach(b => b.classList.add('graded'));
   store('staff.miss', miss);
-  const entry = { t: Date.now(), clef: cfg.clef, levelId: cfg.level, acc: cfg.acc, seed, score, total: TOTAL, secs: Math.round(secs), timeout: !!timeout };
-  const h = load('staff.history', []); h.unshift(entry); store('staff.history', h.slice(0, 100));
+  const entry = { id: newId(), who, t: Date.now(), clef: cfg.clef, levelId: cfg.level, acc: cfg.acc, seed, score, total: TOTAL, secs: Math.round(secs), timeout: !!timeout, sent: false };
+  const h = load('staff.history', []); h.unshift(entry); store('staff.history', h.slice(0, 2000));
+  syncNow();
   lastResult = { score, secs, wrong, timeout: !!timeout };
   renderResult();
   $('keypad').hidden = true; $('timer').hidden = true; $('fitBtn').hidden = true; syncKeypadH();
